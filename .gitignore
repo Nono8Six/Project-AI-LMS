@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# pnpm store (optional local cache)
+.pnpm-store/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Supabase local artifacts
+.supabase/
+supabase/.temp/
+
+# Lockfiles: keep pnpm-lock.yaml committed
+# package-lock.json
+# yarn.lock

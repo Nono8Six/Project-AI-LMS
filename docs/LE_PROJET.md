@@ -1,4 +1,5 @@
 # Product Requirements Document (PRD)
+
 ## LMS IA - Plateforme d'Apprentissage Adaptatif par Intelligence Artificielle
 
 **Version**: 1.0  
@@ -291,6 +292,7 @@ Nous conservons un monorepo mais avec une seule application Next.js, qui contien
 - (admin): dashboard + CRUD simple cours/modules/leçons/utilisateurs (accès réservé au rôle admin)
 
 Principes d’accès:
+
 - RBAC pour les actions (création/édition côté admin)
 - RLS pour les données (visibilité restreinte par utilisateur)
 - Entitlements pour l’accès lecture au contenu premium
@@ -601,6 +603,6 @@ La révolution de l'éducation personnalisée commence avec une ligne de code. I
 
 ---
 
-*Fin du Product Requirements Document V1.0*  
-*Ce document est la propriété intellectuelle de son créateur et constitue la base stratégique du projet LMS IA*  
-*Dernière mise à jour : Septembre 2025*
+_Fin du Product Requirements Document V1.0_  
+_Ce document est la propriété intellectuelle de son créateur et constitue la base stratégique du projet LMS IA_  
+_Dernière mise à jour : Septembre 2025_

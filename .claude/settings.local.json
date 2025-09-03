@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:supabase.com)",
+      "Bash(docker:*)",
+      "Bash(scoop:*)",
+      "Bash(supabase:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

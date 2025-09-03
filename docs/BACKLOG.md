@@ -11,6 +11,7 @@ Ce backlog constitue la feuille de route complète pour le développement du pro
 **Objectif** : Mettre en place l'environnement de développement complet avec tous les outils nécessaires.
 
 **Tâches** :
+
 - Installation de Visual Studio Code avec les extensions essentielles (Prettier, ESLint, TypeScript, Tailwind IntelliSense, Supabase)
 - Installation de Node.js 20 LTS et pnpm comme gestionnaire de paquets
 - Installation de Git et configuration avec GitHub
@@ -25,6 +26,7 @@ Ce backlog constitue la feuille de route complète pour le développement du pro
 **Objectif** : Paramétrer Claude et les autres IA pour maximiser leur efficacité dans le développement.
 
 **Tâches** :
+
 - Création du fichier `docs/ai-assistants/CLAUDE.md` avec les instructions spécifiques pour Claude
 - Configuration des MCP (Model Context Protocol) pour accéder aux fichiers du projet
 - Création du fichier `docs/ai-assistants/CURSOR.md` pour Cursor AI avec les règles du projet
@@ -32,6 +34,7 @@ Ce backlog constitue la feuille de route complète pour le développement du pro
 - Documentation des prompts types pour chaque phase de développement
 
 **Livrables** :
+
 ```
 docs/ai-assistants/
 ├── CLAUDE.md          # Instructions complètes pour Claude
@@ -45,6 +48,7 @@ docs/ai-assistants/
 **Objectif** : Créer la structure de base du projet avec Next.js et la configuration initiale.
 
 **Tâches** :
+
 - Initialisation du projet avec `create-next-app` en utilisant TypeScript et Tailwind
 - Configuration du monorepo avec pnpm workspaces
 - Mise en place de la structure de dossiers définie dans STACK_TECHNIQUE
@@ -59,6 +63,7 @@ docs/ai-assistants/
 **Objectif** : Mettre en place Git avec une stratégie de branches claire et des automatisations.
 
 **Tâches** :
+
 - Initialisation du repository Git et connexion à GitHub
 - Création du fichier `.gitignore` complet pour Next.js et Node.js
 - Configuration des branches : main, staging, develop
@@ -75,6 +80,7 @@ docs/ai-assistants/
 **Objectif** : Mettre en place Supabase en local pour le développement.
 
 **Tâches** :
+
 - Démarrage de Supabase avec `supabase start`
 - Vérification de l'accès à Supabase Studio sur localhost:54323
 - Configuration des variables d'environnement Supabase dans `.env.local`
@@ -88,6 +94,7 @@ docs/ai-assistants/
 **Objectif** : Créer les tables fondamentales pour la gestion des utilisateurs.
 
 **Tâches** :
+
 - Création de la migration pour la table `profiles` étendue depuis auth.users
 - Ajout des champs essentiels : nom, prénom, role, avatar_url
 - Configuration du système de rôles RBAC (member, admin, super_admin)
@@ -101,6 +108,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter l'authentification complète avec Magic Link et Google OAuth.
 
 **Tâches** :
+
 - Configuration de l'authentification Magic Link dans Supabase
 - Configuration de Google OAuth (création du projet Google Cloud)
 - Création des pages `/auth/connexion` et `/auth/inscription`
@@ -115,6 +123,7 @@ docs/ai-assistants/
 **Objectif** : Sécuriser les données avec les Row Level Security policies.
 
 **Tâches** :
+
 - Activation de RLS sur toutes les tables
 - Création de la politique "Les utilisateurs voient leur propre profil"
 - Création de la politique "Les admins voient tous les profils"
@@ -128,6 +137,7 @@ docs/ai-assistants/
 **Objectif** : Créer les tables pour la structure pédagogique.
 
 **Tâches** :
+
 - Création des tables : courses, modules, lessons
 - Définition des relations entre les tables
 - Ajout des champs JSONB pour le contenu flexible des leçons
@@ -143,6 +153,7 @@ docs/ai-assistants/
 **Objectif** : Mettre en place le système de composants UI.
 
 **Tâches** :
+
 - Installation de shadcn/ui avec `npx shadcn-ui@latest init`
 - Configuration du thème et des couleurs de base
 - Installation des composants essentiels : Button, Card, Dialog, Form
@@ -156,6 +167,7 @@ docs/ai-assistants/
 **Objectif** : Construire la structure de navigation de l'application.
 
 **Tâches** :
+
 - Création du header public avec navigation et boutons d'authentification
 - Création du footer avec liens essentiels
 - Mise en place du layout pour les pages publiques
@@ -169,6 +181,7 @@ docs/ai-assistants/
 **Objectif** : Créer une page d'accueil attractive et informative.
 
 **Tâches** :
+
 - Création de la section hero avec proposition de valeur
 - Section de présentation des fonctionnalités clés
 - Section témoignages (avec données fictives pour l'instant)
@@ -182,6 +195,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter la protection des pages selon l'authentification.
 
 **Tâches** :
+
 - Création du middleware Next.js pour vérifier l'authentification
 - Mise en place des layouts protégés pour les zones membre et admin
 - Création du composant RoleGate pour la vérification des rôles
@@ -195,6 +209,7 @@ docs/ai-assistants/
 **Objectif** : Créer l'espace membre minimal fonctionnel.
 
 **Tâches** :
+
 - Création de la page dashboard membre avec message de bienvenue
 - Affichage des informations du profil utilisateur
 - Liste des cours disponibles (données statiques pour l'instant)
@@ -210,6 +225,7 @@ docs/ai-assistants/
 **Objectif** : Créer l'interface d'administration minimale.
 
 **Tâches** :
+
 - Création du layout admin avec sidebar spécifique
 - Vérification du rôle admin dans le middleware
 - Dashboard admin avec statistiques basiques
@@ -223,6 +239,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter la logique serveur pour gérer les cours.
 
 **Tâches** :
+
 - Création des API routes pour les opérations CRUD sur les cours
 - Validation des données avec Zod
 - Gestion des erreurs et codes de retour appropriés
@@ -236,6 +253,7 @@ docs/ai-assistants/
 **Objectif** : Créer l'interface d'administration des cours.
 
 **Tâches** :
+
 - Liste des cours avec table paginée et recherche
 - Formulaire de création de cours avec validation
 - Page d'édition de cours existant
@@ -249,6 +267,7 @@ docs/ai-assistants/
 **Objectif** : Permettre l'organisation des cours en modules.
 
 **Tâches** :
+
 - Interface pour ajouter des modules à un cours
 - Réorganisation des modules par glisser-déposer
 - Édition inline des titres et descriptions
@@ -262,6 +281,7 @@ docs/ai-assistants/
 **Objectif** : Créer l'éditeur pour composer les leçons.
 
 **Tâches** :
+
 - Interface d'édition de leçon avec métadonnées
 - Système de blocs pour structurer le contenu
 - Ajout/suppression/réorganisation des blocs
@@ -277,6 +297,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter le bloc de contenu textuel enrichi.
 
 **Tâches** :
+
 - Intégration d'un éditeur MDX simple
 - Preview en temps réel du rendu MDX
 - Support du formatage de base (gras, italique, titres, listes)
@@ -290,6 +311,7 @@ docs/ai-assistants/
 **Objectif** : Permettre l'upload et la lecture de vidéos via Mux.
 
 **Tâches** :
+
 - Configuration du compte Mux et récupération des clés API
 - Création de l'interface d'upload de vidéo
 - Intégration du player Mux dans le bloc vidéo
@@ -303,6 +325,7 @@ docs/ai-assistants/
 **Objectif** : Créer un système de quiz pour valider les connaissances.
 
 **Tâches** :
+
 - Interface de création de questions (QCM, vrai/faux)
 - Éditeur de quiz dans l'admin
 - Composant de quiz interactif côté apprenant
@@ -316,6 +339,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter les boutons de validation de lecture.
 
 **Tâches** :
+
 - Création du composant ValidationButton
 - Timer minimum avant activation (basé sur la longueur du contenu)
 - Animation et feedback visuel lors de la validation
@@ -331,6 +355,7 @@ docs/ai-assistants/
 **Objectif** : Mettre en place le système de suivi de progression.
 
 **Tâches** :
+
 - Création de la table lesson_progress
 - API pour enregistrer la progression
 - Calcul automatique des pourcentages de complétion
@@ -344,6 +369,7 @@ docs/ai-assistants/
 **Objectif** : Visualiser la progression dans l'interface.
 
 **Tâches** :
+
 - Barre de progression sur les cartes de cours
 - Indicateurs visuels sur les leçons (check marks)
 - Dashboard de progression détaillée
@@ -357,6 +383,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter la logique de déblocage progressif du contenu.
 
 **Tâches** :
+
 - Vérification des prérequis avant accès à une leçon
 - Interface indiquant les leçons verrouillées
 - Messages explicatifs sur les conditions de déblocage
@@ -372,6 +399,7 @@ docs/ai-assistants/
 **Objectif** : Mettre en place l'intégration avec Google Gemini.
 
 **Tâches** :
+
 - Création du compte Google AI Studio
 - Récupération et sécurisation de la clé API
 - Création du service GeminiService
@@ -385,6 +413,7 @@ docs/ai-assistants/
 **Objectif** : Créer la structure de données pour gérer l'IA.
 
 **Tâches** :
+
 - Création des tables : ai_prompts, ai_sessions, ai_usage_tracking
 - Migration et seed avec des prompts de test
 - Politiques RLS pour sécuriser les données IA
@@ -398,6 +427,7 @@ docs/ai-assistants/
 **Objectif** : Gérer les prompts système de manière flexible.
 
 **Tâches** :
+
 - Interface admin pour créer/éditer des prompts
 - Système de variables dans les prompts ({{lesson_title}}, etc.)
 - Versioning des prompts avec historique
@@ -411,6 +441,7 @@ docs/ai-assistants/
 **Objectif** : Créer l'interface de chat avec l'IA.
 
 **Tâches** :
+
 - Composant ChatInterface avec input et messages
 - Appel à l'API Gemini via API route sécurisée
 - Affichage des messages avec markdown
@@ -424,6 +455,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter la persistance des conversations.
 
 **Tâches** :
+
 - Sauvegarde de l'historique de conversation
 - Rechargement d'une session existante
 - Contexte maintenu entre les messages
@@ -439,6 +471,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter le système d'évaluation par l'IA.
 
 **Tâches** :
+
 - Structure de prompt pour l'évaluation pédagogique
 - Parsing de la réponse IA pour extraire le score
 - Logique des trois tentatives avec approches différentes
@@ -452,6 +485,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter les garde-fous sur la consommation.
 
 **Tâches** :
+
 - Compteur de tokens en temps réel
 - Vérification des limites avant chaque appel
 - Limites quotidiennes et mensuelles par utilisateur
@@ -465,6 +499,7 @@ docs/ai-assistants/
 **Objectif** : Créer le tableau de bord de suivi des coûts IA.
 
 **Tâches** :
+
 - Page admin avec métriques en temps réel
 - Graphiques de consommation (journalier, mensuel)
 - Top consommateurs et patterns d'usage
@@ -478,6 +513,7 @@ docs/ai-assistants/
 **Objectif** : Permettre la configuration flexible des limites.
 
 **Tâches** :
+
 - Interface admin pour définir les limites globales
 - Override par utilisateur si nécessaire
 - Notifications aux utilisateurs proches des limites
@@ -493,6 +529,7 @@ docs/ai-assistants/
 **Objectif** : Mettre en place l'infrastructure de paiement.
 
 **Tâches** :
+
 - Création du compte Stripe en mode test
 - Configuration des webhooks Stripe
 - Création des produits et prix dans Stripe
@@ -506,6 +543,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter le parcours d'achat.
 
 **Tâches** :
+
 - Bouton d'achat sur les pages de cours
 - Création de la session Stripe Checkout
 - Redirection vers la page de paiement Stripe
@@ -519,6 +557,7 @@ docs/ai-assistants/
 **Objectif** : Gérer les droits d'accès après achat.
 
 **Tâches** :
+
 - Création automatique de l'entitlement après paiement
 - Vérification des droits avant accès au contenu
 - Interface admin pour gérer les entitlements
@@ -532,6 +571,7 @@ docs/ai-assistants/
 **Objectif** : Mettre en place le programme de parrainage.
 
 **Tâches** :
+
 - Génération de codes d'affiliation uniques
 - Tracking des clics et conversions
 - Calcul automatique des commissions
@@ -547,6 +587,7 @@ docs/ai-assistants/
 **Objectif** : Créer le système de certification.
 
 **Tâches** :
+
 - Template de certificat en HTML/CSS
 - Génération PDF avec les données de l'apprenant
 - Code de vérification unique
@@ -560,6 +601,7 @@ docs/ai-assistants/
 **Objectif** : Implémenter la logique d'obtention.
 
 **Tâches** :
+
 - Vérification de complétion à 100%
 - Score minimum requis sur les évaluations
 - Blocage si conditions non remplies
@@ -575,6 +617,7 @@ docs/ai-assistants/
 **Objectif** : Améliorer la vitesse et la réactivité.
 
 **Tâches** :
+
 - Analyse avec Lighthouse et correction des problèmes
 - Mise en place du lazy loading pour les images
 - Optimisation des requêtes base de données
@@ -588,6 +631,7 @@ docs/ai-assistants/
 **Objectif** : Valider tous les parcours utilisateur.
 
 **Tâches** :
+
 - Configuration de Playwright ou Cypress
 - Tests du parcours d'inscription complet
 - Tests du parcours d'apprentissage
@@ -601,6 +645,7 @@ docs/ai-assistants/
 **Objectif** : Renforcer la sécurité de l'application.
 
 **Tâches** :
+
 - Audit de sécurité avec OWASP checklist
 - Configuration des headers de sécurité
 - Rate limiting sur les API sensibles
@@ -614,6 +659,7 @@ docs/ai-assistants/
 **Objectif** : Documenter complètement le projet.
 
 **Tâches** :
+
 - README complet avec instructions de setup
 - Documentation API avec exemples
 - Guide d'utilisation pour les admins
@@ -627,6 +673,7 @@ docs/ai-assistants/
 **Objectif** : Mettre en ligne l'application.
 
 **Tâches** :
+
 - Configuration de Vercel pour le déploiement
 - Migration de Supabase vers la production
 - Configuration des domaines et DNS
@@ -701,4 +748,4 @@ Chaque session est une opportunité d'apprentissage. Noter les patterns de code 
 
 ---
 
-*Ce backlog constitue la feuille de route complète du projet LMS IA. Il est conçu pour être suivi de manière séquentielle tout en restant flexible selon les contraintes et découvertes du développement. Chaque session représente un pas concret vers la réalisation de la vision définie dans le PRD.*
+_Ce backlog constitue la feuille de route complète du projet LMS IA. Il est conçu pour être suivi de manière séquentielle tout en restant flexible selon les contraintes et découvertes du développement. Chaque session représente un pas concret vers la réalisation de la vision définie dans le PRD._

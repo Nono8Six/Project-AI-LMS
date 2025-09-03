@@ -7,6 +7,7 @@ Architecture monolithique modulaire basée sur Next.js 15, organisée en monorep
 ## Stack Technique
 
 ### Framework Principal
+
 **Next.js 15 avec App Router**  
 Choix motivé par le rendering hybride (SSR/SSG/ISR), l'optimisation automatique des performances, et le support natif du streaming. App Router permet une architecture basée sur les layouts imbriqués et les Server Components pour une meilleure performance.
 
@@ -14,22 +15,27 @@ Choix motivé par le rendering hybride (SSR/SSG/ISR), l'optimisation automatique
 Indispensable pour la maintenabilité d'un projet solo. Détection des erreurs à la compilation, autocomplétion intelligente, et refactoring sécurisé.
 
 ### Base de Données et Backend
+
 **Supabase (PostgreSQL 15)**  
 Solution tout-en-un offrant base de données, authentification, stockage fichiers et temps réel. Choix stratégique pour le développement rapide avec RLS (Row Level Security) pour la sécurité en profondeur.
 
 ### Intelligence Artificielle
+
 **Google Gemini Flash 2.5**  
 Rapport coût/performance optimal pour l'évaluation conversationnelle. Fenêtre de contexte d'1M tokens permettant des sessions longues avec mémoire complète.
 
 ### Paiement
+
 **Stripe**  
 Standard de l'industrie pour les paiements. Gestion native des abonnements et webhooks pour l'automatisation.
 
 ### Vidéo
+
 **Mux**  
 Streaming adaptatif professionnel avec analytics détaillées essentielles pour le tracking de progression.
 
 ### UI/UX
+
 **Tailwind CSS + shadcn/ui**  
 Développement rapide avec composants accessibles et personnalisables. shadcn/ui fournit une base solide sans vendor lock-in.
 
@@ -37,7 +43,7 @@ Développement rapide avec composants accessibles et personnalisables. shadcn/ui
 
 ```
 lms-ia/
-├── app/                                 
+├── app/
 │   ├── src/
 │   │   ├── app/                        # Routes et pages
 │   │   ├── components/                 # Composants React
@@ -47,7 +53,7 @@ lms-ia/
 │   ├── public/                         # Assets statiques
 │   └── [configs]                       # Configurations
 │
-├── infrastructure/                     
+├── infrastructure/
 │   ├── database/                       # Schémas et migrations
 │   ├── supabase/                       # Configuration Supabase
 │   └── scripts/                        # Automatisation
@@ -204,6 +210,7 @@ shared/
 ### Structure des Composants
 
 Chaque composant suit cette organisation:
+
 ```
 ComponentName/
 ├── index.ts                           # Export public
@@ -292,6 +299,7 @@ Configuration/
 ### Logging Structuré
 
 Utilisation de Pino ou Winston pour des logs structurés JSON avec niveaux:
+
 - ERROR: Erreurs critiques
 - WARN: Comportements anormaux
 - INFO: Événements métier
@@ -333,6 +341,7 @@ analyze     → Analyse bundle
 ### Points d'Extension
 
 L'architecture permet l'ajout facile de:
+
 - Nouveaux types de contenu via le système de blocs
 - Nouvelles intégrations IA via l'abstraction de service
 - Nouveaux modes de paiement via les adapters
@@ -341,6 +350,7 @@ L'architecture permet l'ajout facile de:
 ### Migration Future
 
 Structure préparée pour une évolution vers:
+
 - Microservices si nécessaire (features déjà isolées)
 - API publique (logique métier découplée)
 - Application mobile (core réutilisable)
