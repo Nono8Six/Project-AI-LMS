@@ -132,13 +132,13 @@ supabase seed run
 
 Quand les services sont démarrés :
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| **API REST** | http://127.0.0.1:54321 | Endpoint principal API |
-| **GraphQL** | http://127.0.0.1:54321/graphql/v1 | Interface GraphQL |
-| **Studio** | http://127.0.0.1:54323 | Interface d'administration |
-| **Inbucket** | http://127.0.0.1:54324 | Tests d'emails |
-| **Storage** | http://127.0.0.1:54321/storage/v1 | API de stockage |
+| Service      | URL                               | Description                |
+| ------------ | --------------------------------- | -------------------------- |
+| **API REST** | http://127.0.0.1:54321            | Endpoint principal API     |
+| **GraphQL**  | http://127.0.0.1:54321/graphql/v1 | Interface GraphQL          |
+| **Studio**   | http://127.0.0.1:54323            | Interface d'administration |
+| **Inbucket** | http://127.0.0.1:54324            | Tests d'emails             |
+| **Storage**  | http://127.0.0.1:54321/storage/v1 | API de stockage            |
 
 ## Authentification Locale
 
@@ -158,6 +158,7 @@ super-secret-jwt-token-with-at-least-32-characters-long
 ### Configuration OAuth
 
 Pour tester Google OAuth localement, configurez dans Supabase Studio :
+
 1. Aller dans Authentication > Settings > Auth Providers
 2. Activer Google
 3. Configurer les Client ID et Secret
@@ -177,8 +178,9 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 ### Studio Web
 
 Ouvrir http://127.0.0.1:54323 pour :
+
 - Gérer les tables et données
-- Configurer l'authentification  
+- Configurer l'authentification
 - Monitorer les requêtes
 - Tester les APIs
 
@@ -267,7 +269,7 @@ Si les ports par défaut sont occupés, modifiez `supabase/config.toml` :
 [api]
 port = 55321  # Au lieu de 54321
 
-[db]  
+[db]
 port = 55322  # Au lieu de 54322
 ```
 
@@ -307,12 +309,12 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 
 ```typescript
 // src/lib/supabase.ts
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
 ## Bonnes Pratiques
@@ -326,7 +328,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 ### Performance
 
 - Utiliser la génération de types pour l'autocomplétion
-- Créer des index sur les colonnes fréquemment requêtées  
+- Créer des index sur les colonnes fréquemment requêtées
 - Monitorer les requêtes lentes dans Studio
 
 ### Développement

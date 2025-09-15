@@ -2,6 +2,17 @@
 
 Ce fichier fournit des directives à Claude Code (claude.ai/code) pour travailler efficacement sur ce repository.
 
+## Exigences Non Négociables
+
+- Zéro hardcode: couleurs via tokens CSS (HSL vars), routes via `@/shared/constants/routes`, domaines/URLs via ENV uniquement.
+- Zéro mock/skeleton/marketing par défaut. Exception uniquement sur demande explicite de l’utilisateur.
+- Un seul `.env` (racine) chargé par `app/next.config.ts`. `NEXT_PUBLIC_*` côté client uniquement. Variables validées (Zod).
+- RSC par défaut; `use client` seulement si requis (Radix/shadcn interactions).
+- Sécurité: CSP stricte en prod (sans `unsafe-*`), `images.domains`/`connect-src` issus d’ENV, SVG dangereux désactivés.
+- Qualité: `pnpm typecheck` + `pnpm lint` obligatoires; Tailwind via tokens; shadcn/ui sans overrides non typés.
+- DX: Node ≥ 22, scripts utilitaires (`check:node`, `dev:clean`, `port:free`).
+- QA liens: `NEXT_PUBLIC_ENABLE_TEST_NAV` (layouts), désactivé en prod.
+
 ## Aperçu du Projet
 
 ### 1.1 Énoncé de Vision
@@ -45,11 +56,19 @@ Créer la première plateforme française d'apprentissage qui utilise l'intellig
 ### Configuration Environnement
 
 ```bash
-# Configuration développement local (à implémenter)
+# Configuration développement local
 pnpm install                # Installer dépendances
 pnpm dev                    # Lancer serveur développement
 supabase start             # Démarrer instance Supabase locale
 ```
+
+### Variables d'Environnement
+
+Le projet utilise un **seul fichier .env** à la racine du monorepo pour toutes les variables d'environnement :
+
+- **Fichier unique** : `.env` à la racine (chargé automatiquement par `next.config.ts`)
+- **Template** : `.env.example` contient toutes les variables nécessaires
+- **Sécurité** : Jamais de commit du `.env`, utiliser `.env.example` comme référence
 
 ### Qualité du Code
 
@@ -77,8 +96,19 @@ supabase gen types typescript --local  # Générer types TypeScript
 
 - **Architecture basée sur les features** : Chaque fonctionnalité majeure est autonome
 - **Server Components en priorité** : Utiliser Next.js 15 App Router avec RSC
-- **APIs type-safe** : Toutes les routes API utilisent la validation Zod
+- **APIs type-safe** : oRPC avec contrats Zod end-to-end
 - **Composants atomiques** : shadcn/ui avec extensions personnalisées
+
+# Decisions — API & Runtime
+
+- API paradigm: oRPC uniquement. Aucune route Next.js API legacy.
+- Runtime: Node.js runtime pour l'endpoint oRPC (compatibilité Supabase service role, logging, rate limit).
+- Prefix d'API: dérivé via constantes/ENV, jamais en dur (fallback `/api/rpc`).
+- Secrets: jamais sérialisés; service role uniquement côté serveur, scoping minimal par handler.
+- Zéro mock/donnée applicative: uniquement primitives système/auth minimales.
+- Validation: Zod pour toutes entrées/sorties (contrats), erreurs normalisées (401/403/422/429/500).
+- Observabilité: `x-request-id` systématique, logs structurés (niveau via ENV), pas de fuite de secrets.
+- Documentation: OpenAPI générée localement et versionnée dans `docs/api/v1/`.
 
 ### Patterns d'Intégration IA
 
@@ -108,7 +138,7 @@ ComponentName/
 
 #### Principes de Développement
 
-- Server Components par défaut : Utiliser 'use client' uniquement si nécessaire
+- Server Components par défaut; `use client` uniquement si nécessaire
 - Pas de logique dans les composants : Extraire dans des hooks ou services
 - Validation systématique : Zod pour toutes les entrées utilisateur
 - Gestion d'erreur robuste : Try-catch avec messages utilisateur clairs
@@ -125,21 +155,31 @@ ComponentName/
 
 ### Sécurité et Permissions
 
-#### RBAC (Role-Based Access Control)
+#### RBAC V1 : Simplicité + Extensibilité
 
-Rôles définis : visiteur, membre, modérateur, admin
-Chaque rôle a des permissions spécifiques vérifiées à trois niveaux :
+**Approche V1** : Système simple `member`/`admin` avec architecture sur-sécurisée préparée pour V2.
+**Approche V2** : Extension RBAC complet avec `member_premium`, `moderator`, `instructor`.
 
-- Middleware Next.js (protection routes)
-- Layouts avec vérification de rôle
-- RLS Supabase (sécurité base de données)
+#### Architecture Permissions V1
+
+- **Interface extensible** : `hasPermission(user, action)` dès V1, implémentation simple
+- **Rôles V1** : `member` (authentifié de base), `admin` (gestion complète système)
+- **Vérification triple** : Middleware Next.js + orpc handlers + RLS Supabase
+- **Préparation V2** : Structure code extensible sans refonte, migration transparente
 
 #### RLS (Row Level Security)
 
-Politiques actives sur toutes les tables :
+Politiques RLS ultra-strictes sur toutes les tables sans exception :
 
-- Les utilisateurs voient uniquement leurs données
-- Les admins ont accès étendu via service role key
-- Jamais d'accès direct à la base sans vérification
+- Utilisateurs : accès uniquement leurs données (user_id = auth.uid())
+- Service role : webhooks Stripe et audit logging (current_setting('role') = 'service_role')  
+- Admins : accès étendu contrôlé via rôle database (role = 'admin')
+- Jamais de bypass sécurité : toute requête passe par RLS
+
+#### Middleware de Sécurité
+
+Pipeline sécurisé : security headers + CSP → rate limiting → auth extraction → role verification → route protection → onboarding validation → orpc context injection.
+
+## 🚨 AUCUN HARDCODE ou données MOCKER
 
 Ce CLAUDE.md fournit le contexte essentiel pour une assistance développement efficace. Les fichiers de documentation référencés contiennent les détails complets pour compréhension approfondie quand nécessaire.

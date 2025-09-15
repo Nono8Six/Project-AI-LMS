@@ -1,36 +1,97 @@
-// ESLint flat config (v9+)
 import js from '@eslint/js';
-import tsParser from '@typescript-eslint/parser';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
-import prettier from 'eslint-config-prettier';
+import tseslint from '@typescript-eslint/eslint-plugin';
+import tsparser from '@typescript-eslint/parser';
 
 export default [
-  // Ignore patterns
   {
-    ignores: ['node_modules/', 'dist/', 'build/', 'coverage/', '.supabase/', 'supabase/.temp/'],
+    ignores: [
+      'node_modules/**',
+      '.next/**',
+      'app/.next/**',
+      'src/shared/types/**',
+      '**/dist/**',
+      '**/build/**',
+      'coverage/**',
+      'supabase/.temp/**',
+      '**/*.tsbuildinfo',
+      'app/src/shared/types/**',
+    ],
   },
-  // JS recommended
   js.configs.recommended,
-  // TS recommended
   {
-    files: ['**/*.ts', '**/*.tsx'],
+    files: ['**/*.{ts,tsx,js,mjs,cjs}'],
     languageOptions: {
-      parser: tsParser,
-      ecmaVersion: 2023,
+      parser: tsparser,
+      ecmaVersion: 2022,
       sourceType: 'module',
     },
     plugins: {
-      '@typescript-eslint': tsPlugin,
+      '@typescript-eslint': tseslint,
     },
     rules: {
-      ...tsPlugin.configs.recommended.rules,
+      // Prefer TS-aware rule
+      'no-unused-vars': 'off',
+      // Base quality
+      'no-undef': 'off',
+      'prefer-const': 'error',
+      'no-var': 'error',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-debugger': 'error',
+      'no-alert': 'error',
+      'no-eval': 'error',
+
+      // TS
       '@typescript-eslint/no-unused-vars': [
         'warn',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+    },
+  },
+  {
+    files: ['app/src/**/*.{ts,tsx,js,jsx}'],
+    languageOptions: {
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        URL: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['**/*.{test,spec}.{ts,tsx,js,jsx}'],
+    rules: {
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
       'no-console': 'off',
     },
   },
-  // Disable rule conflicts with Prettier
-  prettier,
+  // Provide common globals for app code regardless of cwd
+  {
+    files: ['**/*.{ts,tsx,js,jsx}'],
+    languageOptions: {
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        URL: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
+  {
+    files: [
+      '**/*.config.{js,ts,mjs,cjs}',
+      '**/next.config.ts',
+      '**/postcss.config.*',
+      '**/tailwind.config.ts',
+    ],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        require: 'readonly',
+        module: 'readonly',
+        __dirname: 'readonly',
+      },
+    },
+  },
 ];

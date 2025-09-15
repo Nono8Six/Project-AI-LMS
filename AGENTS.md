@@ -1,5 +1,15 @@
 # Repository Guidelines
 
+## Hard Rules (Agents)
+
+- No hardcode: use CSS tokens (HSL vars), shared route constants, ENV for domains/URLs.
+- No mock/skeleton/marketing by default. Do it only on explicit user request.
+- Single `.env` at repo root loaded by `app/next.config.ts`. Validate vars; client can only read `NEXT_PUBLIC_*`.
+- RSC first; `use client` only when required (Radix/shadcn).
+- Security: strict CSP in prod; image/remote patterns from ENV; dangerous SVG disabled.
+- Quality: TS strict + ESLint clean; Tailwind via tokens; shadcn/ui idiomatic.
+- DX: Node ≥ 22; use `check:node`, `dev:clean`, `port:free`.
+
 ## Project Structure & Module Organization
 
 - Root: `package.json`, `.env`, `.env.example`, `README.md`, `CLAUDE.md`.
@@ -48,3 +58,14 @@
 - Never commit secrets. Copy `.env.example` to `.env` and fill locally.
 - Use `pnpm` (pinned via `packageManager`); do not add `package-lock.json` or `yarn.lock`.
 - When using Supabase locally, ensure Docker is running; stop services with `pnpm supabase:stop`.
+
+# Decisions — API & Runtime
+
+- API paradigm: oRPC uniquement. Aucune route Next.js API legacy.
+- Runtime: Node.js runtime pour l’endpoint oRPC (compatibilité Supabase service role, logging, rate limit).
+- Prefix d’API: dérivé via constantes/ENV, jamais en dur (fallback `/api/rpc`).
+- Secrets: jamais sérialisés; service role uniquement côté serveur, scoping minimal par handler.
+- Zéro mock/donnée applicative: uniquement primitives système/auth minimales.
+- Validation: Zod pour toutes entrées/sorties (contrats), erreurs normalisées (401/403/422/429/500).
+- Observabilité: `x-request-id` systématique, logs structurés (niveau via ENV), pas de fuite de secrets.
+- Documentation: OpenAPI générée localement et versionnée dans `docs/api/v1/`.

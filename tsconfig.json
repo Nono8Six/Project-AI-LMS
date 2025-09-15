@@ -11,7 +11,22 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "jsx": "react-jsx",
-    "types": ["vitest"]
+    "types": ["vitest"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["app/src/*"],
+      "@/components/*": ["app/src/components/*"],
+      "@/features/*": ["app/src/features/*"],
+      "@/core/*": ["app/src/core/*"],
+      "@/shared/*": ["app/src/shared/*"],
+      "@/types/*": ["app/src/shared/types/*"],
+      "@/utils/*": ["app/src/shared/utils/*"],
+      "@/lib/*": ["app/src/shared/lib/*"],
+      "@/constants/*": ["app/src/shared/constants/*"],
+      "@/hooks/*": ["app/src/core/presentation/hooks/*"],
+      "@/contexts/*": ["app/src/core/presentation/contexts/*"],
+      "@/services/*": ["app/src/core/application/services/*"]
+    }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
   "exclude": ["node_modules", "dist", "build", "coverage"]

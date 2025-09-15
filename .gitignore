@@ -6,6 +6,10 @@ dist/
 build/
 coverage/
 
+# Next.js build artifacts
+app/.next/
+app/tsconfig.tsbuildinfo
+
 # pnpm store (optional local cache)
 .pnpm-store/
 
@@ -23,6 +27,10 @@ Thumbs.db
 # Supabase local artifacts
 .supabase/
 supabase/.temp/
+
+# App local logs
+app/dev.log
+app/orpc-dev.log
 
 # Lockfiles: keep pnpm-lock.yaml committed
 # package-lock.json

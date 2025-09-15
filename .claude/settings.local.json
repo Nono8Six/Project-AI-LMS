@@ -4,9 +4,43 @@
       "WebFetch(domain:supabase.com)",
       "Bash(docker:*)",
       "Bash(scoop:*)",
-      "Bash(supabase:*)"
+      "Bash(supabase:*)",
+      "Bash(node:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm test:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(pnpm install:*)",
+      "Bash(find:*)",
+      "Bash(git rm:*)",
+      "Bash(tree:*)",
+      "Bash(tree:*)",
+      "Bash(pnpm eslint:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(taskkill:*)",
+      "Bash(pnpm build:*)",
+      "Bash(dir)",
+      "Bash(pnpm --dir app typecheck)",
+      "Bash(pnpm --dir app test)",
+      "Bash(pnpm list:*)",
+      "WebSearch",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(sed:*)",
+      "Bash(curl:*)",
+      "Bash(pnpm:*)",
+      "Bash(pkill:*)",
+      "Bash(dir:*)",
+      "Bash(timeout:*)",
+      "mcp__supabase-deploya__get_db_schemas"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7",
+    "supabase-deploya",
+    "shadcn"
+  ]
 }

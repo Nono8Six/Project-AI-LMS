@@ -88,9 +88,9 @@ app/
 │   └── analytics/                     # Tableaux de bord
 │
 └── api/                                # Routes API
-    ├── trpc/                          # API typée (optionnel)
-    ├── webhooks/                      # Webhooks externes
-    └── internal/                      # API internes
+    ├── rpc/                           # orpc - API end-to-end type-safe
+    ├── webhooks/                      # Webhooks externes (Stripe, Supabase)
+    └── internal/                      # API internes legacy
 ```
 
 ### `/app/src/components` - Système de Composants
@@ -226,7 +226,127 @@ ComponentName/
 - **État local**: useState pour l'UI simple
 - **État complexe**: useReducer avec actions typées
 - **État partagé**: Zustand pour la simplicité
-- **État serveur**: TanStack Query pour le cache et la synchronisation
+- **État serveur**: orpc + TanStack Query pour l'état serveur type-safe
+
+## orpc - API Framework End-to-End Type-Safe
+
+### Pourquoi orpc vs Next.js API Routes
+
+**orpc** est notre choix stratégique pour remplacer les API Routes Next.js natives et offrir une expérience développeur supérieure:
+
+- **Type Safety End-to-End**: Validation automatique client ↔ serveur
+- **Contract-First Development**: Un seul contrat partagé pour tout le système
+- **Génération Client Automatique**: Plus de fetch manuel ni de types dupliqués
+- **OpenAPI Native**: Documentation et validation automatiques
+- **Middleware Puissant**: Auth, rate limiting, analytics intégrés
+- **Performance Optimisée**: Lazy routing, streaming, cache intelligent
+
+### Architecture orpc
+
+**Structure organisée en 3 couches:**
+
+```
+orpc/
+├── contracts/                          # Contrats API partagés
+│   ├── auth.contract.ts               # Authentification & sessions
+│   ├── courses.contract.ts            # Gestion cours et modules
+│   ├── ai.contract.ts                 # Évaluations IA & conversations
+│   ├── payments.contract.ts           # Stripe & facturation
+│   ├── analytics.contract.ts          # Métriques & dashboards
+│   └── index.ts                       # Export des contrats
+│
+├── server/                             # Implémentation serveur
+│   ├── middleware/                    # Middleware orpc
+│   │   ├── auth.middleware.ts         # Auth Supabase + RLS
+│   │   ├── rateLimit.middleware.ts    # Protection DDoS
+│   │   ├── analytics.middleware.ts    # Tracking événements
+│   │   └── aiTokens.middleware.ts     # Suivi coûts IA
+│   ├── handlers/                      # Handlers métier
+│   │   ├── auth.handlers.ts           # Logic auth
+│   │   ├── courses.handlers.ts        # Logic cours
+│   │   └── ai.handlers.ts             # Logic IA
+│   └── router.ts                      # Router principal
+│
+└── client/                            # Client généré
+    ├── hooks/                         # React Query hooks
+    ├── types/                         # Types auto-générés
+    └── index.ts                       # Client configuré
+```
+
+### Intégrations Stack Techniques
+
+**1. Supabase + orpc**
+```typescript
+// Middleware auth automatique
+const supabaseAuth = orpc.use(async ({ context, next }) => {
+  const { data: { user } } = await supabase.auth.getUser()
+  return next({ context: { user, supabase } })
+})
+
+// RLS automatique via context
+const getCourses = supabaseAuth.handler(async ({ context }) => {
+  return context.supabase.from('courses')
+    .select('*') // RLS automatique basé sur context.user
+})
+```
+
+**2. TanStack Query + orpc**
+```typescript
+// Hooks auto-générés avec cache intelligent
+const { useQuery, useMutation } = createReactQueryHooks<AppRouter>()
+
+// Usage dans composants
+const { data: courses } = useQuery(['courses.list'])
+const createCourse = useMutation(['courses.create'])
+```
+
+**3. Stripe + orpc**
+```typescript
+// Webhooks typés et validés automatiquement
+export const stripeWebhook = orpc
+  .route({ method: 'POST', path: '/webhooks/stripe' })
+  .input(StripeWebhookSchema)
+  .handler(async ({ input }) => {
+    // Validation Stripe automatique + types guarantis
+  })
+```
+
+**4. Gemini IA + orpc**
+```typescript
+// Streaming + token tracking intégrés
+export const aiEvaluation = orpc
+  .use(aiTokensMiddleware)
+  .input(z.object({ conversation: z.string() }))
+  .handler(async ({ input, context }) => {
+    // Streaming Gemini avec tracking tokens automatique
+    return geminiService.streamEvaluation(input.conversation)
+  })
+```
+
+**5. Next.js 15 App Router + orpc**
+```typescript
+// /api/rpc/[...orpc]/route.ts
+import { RPCHandler } from '@orpc/server/fetch'
+
+const handler = new RPCHandler(appRouter)
+
+export const GET = handler.handle
+export const POST = handler.handle
+// ... autres méthodes
+```
+
+### Avantages vs Architecture Actuelle
+
+| Aspect | Next.js API Routes | orpc |
+|--------|-------------------|------|
+| **Type Safety** | Types séparés manuels | End-to-end automatique |
+| **Validation** | Zod manuel par route | Validation contrats automatique |
+| **Client** | fetch + hooks manuels | Client auto-généré |
+| **Documentation** | Manuelle | OpenAPI automatique |
+| **Middleware** | Custom Next.js | Système intégré puissant |
+| **Testing** | Mocking complexe | Contracts testables isolément |
+| **Performance** | Standard | Optimisations intégrées |
+| **DX** | Duplication types | Single source of truth |
 
 ## Services et Intégrations
 
@@ -263,10 +383,11 @@ Trois niveaux d'abstraction pour la flexibilité:
 
 ### Sécurité Multi-Couches
 
-1. **Middleware Edge** - Vérification avant traitement
-2. **Route Protection** - Guards au niveau des layouts
-3. **API Validation** - Schémas Zod sur toutes les entrées
-4. **Database RLS** - Politiques au niveau base de données
+1. **orpc Middleware Stack** - Auth, rate limiting, validation intégrés
+2. **Middleware Edge** - Vérification avant traitement des requêtes
+3. **Route Protection** - Guards au niveau des layouts + contrats orpc
+4. **API Validation** - Schémas Zod automatiques via contrats orpc
+5. **Database RLS** - Politiques Supabase + injection context orpc
 
 ### Optimisations Performance
 
@@ -334,7 +455,106 @@ lint        → Vérification code
 format      → Formatage Prettier
 typecheck   → Vérification TypeScript
 analyze     → Analyse bundle
+orpc:gen    → Génération client orpc
+orpc:docs   → Génération documentation OpenAPI
 ```
+
+## Migration vers orpc - Stratégie de Transition
+
+### Phase de Migration Progressive
+
+**Phase 1: Fondations (Actuelle)**
+- ✅ Architecture Next.js 15 App Router stable
+- ✅ Types Supabase Database complets
+- ✅ Middleware auth existant
+- ✅ TanStack Query hooks manuels
+
+**Phase 2: Installation orpc**
+```bash
+# Packages orpc essentiels
+pnpm add @orpc/contract @orpc/server @orpc/client
+pnpm add @orpc/server/fetch @orpc/tanstack-query
+pnpm add @orpc/otel @orpc/react  # Intégrations
+
+# DevDependencies
+pnpm add -D @orpc/openapi @orpc/hey-api
+```
+
+**Phase 3: Migration Contracts**
+```typescript
+// 1. Réutilisation types Database existants
+import type { Database } from '@/shared/types/api.types'
+
+// 2. Création contracts orpc basés sur architecture actuelle
+export const coursesContract = orpc({
+  list: {
+    input: PaginatedRequestSchema,
+    output: z.array(CourseSchema)
+  },
+  get: {
+    input: z.object({ id: z.string() }),
+    output: CourseSchema
+  }
+  // ... autres endpoints
+})
+```
+
+**Phase 4: Implémentation Serveur**
+```typescript
+// Migration progressive handlers existants vers orpc
+export const coursesRouter = orpc
+  .use(supabaseAuthMiddleware)
+  .use(rateLimitMiddleware)
+  .contract(coursesContract)
+  .implement({
+    list: async ({ input, context }) => {
+      // Réutilisation logique existante + context orpc
+      return context.supabase.from('courses')
+        .select('*')
+        .range(input.page * input.limit, (input.page + 1) * input.limit)
+    }
+  })
+```
+
+**Phase 5: Migration Client Progressive**
+```typescript
+// Remplacement progressif des hooks TanStack Query manuels
+// AVANT:
+const useCoursesQuery = () => useQuery(['courses'], fetchCourses)
+
+// APRÈS:
+const { courses } = createReactQueryHooks<AppRouter>()
+const { data } = courses.list.useQuery({ page: 0, limit: 10 })
+```
+
+**Phase 6: Coexistence Hybride**
+- API Routes legacy maintenues en `/api/internal/`
+- Nouvelles API orpc en `/api/rpc/`
+- Migration progressive route par route
+- Aucune breaking change côté frontend
+
+### Points de Validation Migration
+
+**✅ Critères de Succès par Phase**
+- **Phase 2**: Installation packages, configuration de base
+- **Phase 3**: Premier contract fonctionnel (ex: courses.list)
+- **Phase 4**: Premier handler orpc avec middleware auth
+- **Phase 5**: Premier hook client fonctionnel
+- **Phase 6**: Coexistence stable legacy + orpc
+
+**🔧 Outils de Migration**
+- Script de génération contracts depuis types existants
+- Tests automatiques de régression API
+- Monitoring comparatif performance legacy vs orpc
+- Documentation migration pour l'équipe
+
+**⚠️ Risques et Mitigations**
+- **Risque**: Breaking changes hooks existants
+  - **Mitigation**: Coexistence progressive, feature flags
+- **Risque**: Performance dégradée pendant transition
+  - **Mitigation**: Monitoring continu, rollback possible
+- **Risque**: Courbe d'apprentissage orpc
+  - **Mitigation**: Formation équipe, documentation détaillée
 
 ## Scalabilité et Évolution
 
