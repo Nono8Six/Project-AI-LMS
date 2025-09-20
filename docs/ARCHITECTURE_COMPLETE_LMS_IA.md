@@ -228,7 +228,15 @@ Cache Redis optionnel pour sessions utilisateur. Cache Next.js pour données sta
 ## 🛡️ **Sécurité et Compliance**
 
 ### **Authentification**
-Validation email obligatoire activation compte. Rate limiting strict endpoints sensibles. Sessions sécurisées cookies httpOnly, secure, sameSite. Logout invalidation côté serveur.
+Validation email obligatoire activation compte. Rate limiting strict endpoints sensibles. Sessions sécurisées via cookies httpOnly/secure/sameSite avec capture systématique du refresh token. Un service serveur persiste chaque session dans la table `auth_sessions` (TTL, IP, user-agent) et révoque les tokens via `supabase.auth.admin.signOut`. Logout simple invalide uniquement la session courante (scope « local » + drapeau « revoked » en base), l’option « all devices » déclenche un `signOut` global et marque toutes les sessions comme révoquées.
+
+### ✅ Préflight Auth Checklist
+- Variables d’environnement prod validées (`validateServerEnv`) : URL Supabase, clés anon/service role, `SUPABASE_JWT_SECRET`, `SUPABASE_PROJECT_REF`, `SUPABASE_DATABASE_PASSWORD`, Upstash si Redis.
+- RLS activées sur toutes les tables (`supabase/migrations/20250915120000_enable_rls_all_tables.sql`).
+- Sessions persistées dans `auth_sessions` (tests `auth.sessions.test.ts`).
+- Rate limiting & brute-force persistant (`auth_rate_limit_counters`, `auth_bruteforce_attempts` + tests `rateLimit.backoff.test.ts`).
+- Tests environnement (`tests/env/server-env.test.ts`) exécutés.
+- `supabase db reset` exécutée après chaque migration.
 
 ### **Autorisation**
 RLS Supabase sur toutes tables sans exception. Vérification permissions middleware + orpc handlers. Context auth injecté toutes requêtes authentifiées. Principe moindre privilège strict.

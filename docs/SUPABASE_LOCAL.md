@@ -44,6 +44,18 @@ scoop update supabase
 
 ## Configuration du Projet
 
+## Hygiène des secrets
+
+1. Rotatez toutes les clés Supabase depuis https://app.supabase.com > Project Settings > API (`Reset` pour anon et service role, régénérez le JWT).
+2. Supprimez les anciens tokens via `supabase secrets unset` si nécessaire puis mettez à jour vos services qui les consomment.
+3. Générez un nouveau `SUPABASE_ACCESS_TOKEN` (Account Settings > Access Tokens) et stockez-le dans votre gestionnaire de secrets.
+4. Pour Stripe, utilisez `stripe login` puis `stripe listen --print-secret` pour récupérer un webhook secret local et recréez les clés test depuis le dashboard.
+5. Conservez tous les secrets dans un gestionnaire (1Password, Vault, Bitwarden) et injectez-les dans `.env` à l'exécution uniquement.
+6. Après toute rotation, exécutez `git grep "__SET_SUPABASE"` et `git grep "__SET_STRIPE"` pour vérifier que seuls des placeholders subsistent dans le dépôt.
+
+> Astuce : gardez un fichier chiffré `.env.encrypted` hors Git si vous avez besoin d'une sauvegarde locale.
+
+
 ### Initialisation
 
 Le projet est déjà initialisé avec la configuration dans `supabase/config.toml`. Cette configuration définit :
@@ -146,10 +158,10 @@ Quand les services sont démarrés :
 
 ```bash
 # Clé publique (côté client)
-anon key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+anon key: __SET_SUPABASE_ANON_KEY__
 
 # Clé service (côté serveur - permissions élevées)
-service_role key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+service_role key: __SET_SUPABASE_SERVICE_ROLE_KEY__
 
 # JWT Secret
 super-secret-jwt-token-with-at-least-32-characters-long
@@ -169,7 +181,7 @@ Pour tester Google OAuth localement, configurez dans Supabase Studio :
 
 ```bash
 # Tester l'API REST
-curl -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0" http://127.0.0.1:54321/rest/v1/
+curl -H "apikey: $SUPABASE_ANON_KEY" http://127.0.0.1:54321/rest/v1/
 
 # Tester la connexion DB
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
@@ -301,21 +313,35 @@ Vos fichiers `.env` et `.env.example` doivent contenir :
 ```env
 # Supabase Local Development
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+NEXT_PUBLIC_SUPABASE_ANON_KEY=__SET_SUPABASE_ANON_KEY__
+SUPABASE_SERVICE_ROLE_KEY=__SET_SUPABASE_SERVICE_ROLE_KEY__
+SUPABASE_JWT_SECRET=__SET_SUPABASE_JWT_SECRET__
+SUPABASE_ACCESS_TOKEN=__SET_SUPABASE_ACCESS_TOKEN__
 ```
 
-### Configuration Supabase Client
+### Pattern d''injection Supabase
+
+Nous n''exposons plus de clients Supabase globaux. Chaque couche crée le ou les clients nécessaires via les factories de `app/src/shared/lib/supabase`.
 
 ```typescript
-// src/lib/supabase.ts
-import { createClient } from '@supabase/supabase-js';
+// app/src/orpc/server/context.ts
+import { createSupabaseClients, getSupabaseEnvConfig } from '@/shared/lib/supabase';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const clients = createSupabaseClients(getSupabaseEnvConfig());
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export function buildContext(...) {
+  return {
+    supabase: {
+      getUserClient: () => clients.public,
+      getAdminClient: () => clients.admin,
+    },
+    // ...autres propriétés du contexte
+  };
+}
 ```
+
+- **Côté tests** : utilisez `createSupabaseClient` / `createSupabaseAdminClient` avec les mêmes variables d''environnement (voir `tests/integration/profile.rls.test.ts`).
+- **Côté services** : importez les factories (`createProfileService`, `createProductService`, etc.) et injectez le client approprié dans les modules qui en ont besoin. Aucune dépendance globale n''est conservée.
 
 ## Bonnes Pratiques
 

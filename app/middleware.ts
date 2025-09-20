@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { AUTH_LOGIN_PATH, UNAUTHORIZED_PATH, isAdminRoute, isMemberRoute } from '@/shared/constants/routes'
 import { buildConnectSrcDomains, buildFrameSrcDomains, getSecurityConfig, getDomainsConfig, isProduction } from '@/shared/utils/config'
+import { applySecurityHeaders } from '@/shared/utils/security'
 
 function b64(bytes: Uint8Array) {
   // Edge runtime supports btoa via atob? Fallback manual
@@ -72,6 +73,7 @@ export function middleware(request: NextRequest) {
   if (!securityConfig.enableAuthMiddleware) {
     const res = NextResponse.next({ request: { headers: requestHeaders } })
     if (securityConfig.cspUseNonce) applyCSP(res, nonce, isProd)
+    applySecurityHeaders(res, pathname)
     return res
   }
 
@@ -85,6 +87,7 @@ export function middleware(request: NextRequest) {
   if (isAdminRoute(pathname) && !isAdmin) {
     const res = NextResponse.redirect(new URL(UNAUTHORIZED_PATH, request.url))
     if (securityConfig.cspUseNonce) applyCSP(res, nonce, isProd)
+    applySecurityHeaders(res, pathname)
     return res
   }
 
@@ -92,11 +95,13 @@ export function middleware(request: NextRequest) {
   if (isMemberRoute(pathname) && !isAuthenticated) {
     const res = NextResponse.redirect(new URL(AUTH_LOGIN_PATH, request.url))
     if (securityConfig.cspUseNonce) applyCSP(res, nonce, isProd)
+    applySecurityHeaders(res, pathname)
     return res
   }
 
   const res = NextResponse.next({ request: { headers: requestHeaders } })
   if (securityConfig.cspUseNonce) applyCSP(res, nonce, isProd)
+  applySecurityHeaders(res, pathname)
   return res
 }
 

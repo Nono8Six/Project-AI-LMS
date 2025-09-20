@@ -78,6 +78,7 @@ async function handleRPC(request: Request): Promise<Response> {
       ip: context.meta.ip,
       ...(rl ? { rateLimit: { limit: rl.limit, remaining: rl.remaining, reset: rl.reset } } : {}),
       ...(context.user?.id ? { userId: context.user.id } : {}),
+      ...(context.meta.rateLimitKey ? { rateLimitKey: context.meta.rateLimitKey } : {}),
     })
   } catch {
     // non-fatal

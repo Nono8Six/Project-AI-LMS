@@ -22,7 +22,9 @@ Thumbs.db
 .env.local
 .env.development
 .env.production
-.env.test
+.env.saved
+# Allow .env.test for reproductible test environment
+!.env.test
 
 # Supabase local artifacts
 .supabase/

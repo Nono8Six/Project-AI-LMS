@@ -77,9 +77,120 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "user_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+          referencedColumns: ["id"]
+        },
+      ]
+      }
+      auth_sessions: {
+        Row: {
+          session_id: string
+          user_id: string
+          issued_at: string
+          expires_at: string
+          last_activity: string
+          user_agent: string | null
+          ip_address: string | null
+          metadata: Json | null
+          revoked: boolean
+          revoked_reason: string | null
+          revoked_at: string | null
+          created_at: string
+        }
+        Insert: {
+          session_id: string
+          user_id: string
+          issued_at: string
+          expires_at: string
+          last_activity: string
+          user_agent?: string | null
+          ip_address?: string | null
+          metadata?: Json | null
+          revoked?: boolean
+          revoked_reason?: string | null
+          revoked_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          session_id?: string
+          user_id?: string
+          issued_at?: string
+          expires_at?: string
+          last_activity?: string
+          user_agent?: string | null
+          ip_address?: string | null
+          metadata?: Json | null
+          revoked?: boolean
+          revoked_reason?: string | null
+          revoked_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      auth_bruteforce_attempts: {
+        Row: {
+          ip_address: string
+          failure_count: number
+          first_failure_at: string
+          last_failure_at: string
+          blocked_until: string | null
+          metadata: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          ip_address: string
+          failure_count?: number
+          first_failure_at?: string
+          last_failure_at?: string
+          blocked_until?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          ip_address?: string
+          failure_count?: number
+          first_failure_at?: string
+          last_failure_at?: string
+          blocked_until?: string | null
+          metadata?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      auth_rate_limit_counters: {
+        Row: {
+          key: string
+          window_start: string
+          requests: number
+          limit_value: number | null
+          endpoint: string | null
+          metadata: Json | null
+          updated_at: string
+          created_at: string
+        }
+        Insert: {
+          key: string
+          window_start: string
+          requests?: number
+          limit_value?: number | null
+          endpoint?: string | null
+          metadata?: Json | null
+          updated_at?: string
+          created_at?: string
+        }
+        Update: {
+          key?: string
+          window_start?: string
+          requests?: number
+          limit_value?: number | null
+          endpoint?: string | null
+          metadata?: Json | null
+          updated_at?: string
+          created_at?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {
@@ -338,24 +449,53 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          consents: Json
           created_at: string
           full_name: string
           id: string
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
+          referral_code: string | null
+          referrer_id: string | null
+          role: string
+          status: string
           updated_at: string
         }
         Insert: {
+          consents?: Json
           created_at?: string
           full_name: string
           id: string
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          referral_code?: string | null
+          referrer_id?: string | null
+          role?: string
+          status?: string
           updated_at?: string
         }
         Update: {
+          consents?: Json
           created_at?: string
           full_name?: string
           id?: string
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          referral_code?: string | null
+          referrer_id?: string | null
+          role?: string
+          status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -524,4 +664,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

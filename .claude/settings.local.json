@@ -32,7 +32,14 @@
       "Bash(pkill:*)",
       "Bash(dir:*)",
       "Bash(timeout:*)",
-      "mcp__supabase-deploya__get_db_schemas"
+      "mcp__supabase-deploya__get_db_schemas",
+      "Bash(psql:*)",
+      "Bash(npx tsx:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(xargs ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

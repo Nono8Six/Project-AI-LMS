@@ -120,6 +120,35 @@ export interface RequestMeta {
   readonly userAgent: string | undefined;
 }
 
+// Enhanced user profile type for auth context
+export interface UserProfile {
+  readonly id: string;
+  readonly full_name: string;
+  readonly email: string | null;
+  readonly role: string;
+  readonly status: string;
+  readonly onboarding_completed: boolean;
+  readonly onboarding_completed_at: string | null;
+  readonly referral_code: string | null;
+  readonly referrer_id: string | null;
+  readonly consents: Database['public']['Tables']['user_profiles']['Row']['consents'];
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+// Enhanced auth user type with permissions
+export interface AuthUser {
+  readonly id: string;
+  readonly email: string | null;
+  readonly profile: UserProfile | null;
+  readonly permissions: string[] | null; // Will be populated by PermissionService
+}
+
+export interface SessionTokens {
+  readonly accessToken: string | null;
+  readonly refreshToken: string | null;
+}
+
 export interface AppContext {
   readonly meta: ExtendedRequestMeta;
   readonly headers: Record<string, string>;
@@ -129,8 +158,9 @@ export interface AppContext {
     readonly getUserClient: () => SupabaseClient<Database> | undefined;
     readonly getAdminClient: () => SupabaseClient<Database>;
   };
-  // Set by auth middleware later
-  readonly user: { id: string; email?: string | null; role?: string | null } | null;
+  readonly session: SessionTokens;
+  // Enhanced auth context with profile + permissions
+  readonly user: AuthUser | null;
 }
 
 export interface BuildContextInput {
@@ -175,6 +205,20 @@ function extractBearer(headers: Record<string, string>): string | undefined {
   return token;
 }
 
+function parseCookies(cookieHeader: string | undefined): Record<string, string> {
+  if (!cookieHeader) return {};
+  const entries = cookieHeader.split(';');
+  const out: Record<string, string> = {};
+  for (const entry of entries) {
+    const [rawKey, ...rest] = entry.split('=');
+    if (!rawKey) continue;
+    const key = rawKey.trim();
+    if (!key) continue;
+    out[key] = rest.join('=').trim();
+  }
+  return out;
+}
+
 function maybeCreateSupabaseUserClient(headers: Record<string, string>): SupabaseClient<Database> | undefined {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -205,6 +249,13 @@ function buildAdminClient(): SupabaseClient<Database> {
 // Main builder
 export function buildContext(input: BuildContextInput): AppContext {
   const headersObj = headersToObject(input.headers);
+  const cookies = parseCookies(headersObj['cookie']);
+  const accessTokenCookie = cookies['sb-access-token'] ?? null;
+  const refreshTokenCookie = cookies['sb-refresh-token'] ?? null;
+
+  if (!headersObj['authorization'] && accessTokenCookie) {
+    headersObj['authorization'] = `Bearer ${accessTokenCookie}`;
+  }
   const requestId = headersObj['x-request-id'] || safeRandomUUID();
   const logger = createLogger(requestId);
 
@@ -230,6 +281,10 @@ export function buildContext(input: BuildContextInput): AppContext {
     supabase: {
       getUserClient,
       getAdminClient: buildAdminClient,
+    },
+    session: {
+      accessToken: extractBearer(headersObj) ?? accessTokenCookie,
+      refreshToken: refreshTokenCookie,
     },
     user: null,
   };

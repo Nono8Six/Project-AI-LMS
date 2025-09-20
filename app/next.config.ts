@@ -10,7 +10,7 @@ import { deriveApiPrefix } from './src/shared/utils/prefix'
 // Use shared config utilities to avoid hardcoded domain access
 import { buildImageDomains, buildConnectSrcDomains, buildFrameSrcDomains, getSecurityConfig, getDomainsConfig, shouldAnalyzeBundle, isProduction } from './src/shared/utils/config'
 
-function hostFromUrl(url?: string): string | undefined {
+function _hostFromUrl(url?: string): string | undefined {
   if (!url) return undefined
   try {
     const u = new URL(url)

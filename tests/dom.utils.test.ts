@@ -48,8 +48,8 @@ describe('dom.ts - DOM Utilities', () => {
 
   describe('SSR Context (no window/document)', () => {
     beforeEach(() => {
-      delete global.window;
-      delete global.document;
+      delete (global as any).window;
+      delete (global as any).document;
     });
 
     it('getNonceFromMeta returns null in SSR', async () => {

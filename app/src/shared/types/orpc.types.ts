@@ -14,8 +14,10 @@ export interface ExtendedRequestMeta {
   readonly receivedAt: string;
   readonly ip: string | null;
   readonly userAgent: string | undefined;
+  readonly endpoint?: string; // orpc endpoint path (ex: 'auth.login', 'system.health')
   rateLimit?: RateLimitMetadata;
   rateLimitRetryAfter?: number;
+  rateLimitKey?: string;
 }
 
 

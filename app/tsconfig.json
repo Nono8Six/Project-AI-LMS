@@ -4,21 +4,50 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@/components/*": ["src/components/*"],
-      "@/features/*": ["src/features/*"],
-      "@/core/*": ["src/core/*"],
-      "@/shared/*": ["src/shared/*"],
-      "@/types/*": ["src/shared/types/*"],
-      "@/utils/*": ["src/shared/utils/*"],
-      "@/lib/*": ["src/shared/lib/*"],
-      "@/constants/*": ["src/shared/constants/*"],
-      "@/hooks/*": ["src/core/presentation/hooks/*"],
-      "@/contexts/*": ["src/core/presentation/contexts/*"],
-      "@/services/*": ["src/core/application/services/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@/components/*": [
+        "src/components/*"
+      ],
+      "@/features/*": [
+        "src/features/*"
+      ],
+      "@/core/*": [
+        "src/core/*"
+      ],
+      "@/shared/*": [
+        "src/shared/*"
+      ],
+      "@/types/*": [
+        "src/shared/types/*"
+      ],
+      "@/utils/*": [
+        "src/shared/utils/*"
+      ],
+      "@/lib/*": [
+        "src/shared/lib/*"
+      ],
+      "@/constants/*": [
+        "src/shared/constants/*"
+      ],
+      "@/hooks/*": [
+        "src/core/presentation/hooks/*"
+      ],
+      "@/contexts/*": [
+        "src/core/presentation/contexts/*"
+      ],
+      "@/services/*": [
+        "src/core/application/services/*"
+      ]
     },
     "jsx": "preserve",
-    "lib": ["dom", "dom.iterable", "esnext", "webworker"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext",
+      "webworker"
+    ],
     "allowJs": true,
     "incremental": true,
     "isolatedModules": true,
@@ -27,7 +56,11 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "verbatimModuleSyntax": true,
-    "plugins": [{ "name": "next" }]
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
     "next-env.d.ts",
@@ -42,8 +75,7 @@
     "out",
     "coverage",
     "dist",
-    "build",
-    "src/core/debug/services/MonitoringService.ts"
+    "build"
   ],
   "ts-node": {
     "compilerOptions": {

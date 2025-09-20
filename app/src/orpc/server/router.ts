@@ -1,13 +1,12 @@
-import { os } from '@orpc/server'
-import { BodyLimitPlugin } from '@orpc/server/fetch'
-import { API_CONSTANTS } from '@/shared/constants/api'
-import * as contracts from '@/orpc/contracts'
-import * as handlers from '@/orpc/server/handlers'
-import * as debugContracts from '@/orpc/contracts/debug.contract'
-import type { AppContext } from '@/orpc/server/context'
-import { assertEnv } from '@/orpc/server/middleware/envGuard.middleware'
-import { enforceRateLimit } from '@/orpc/server/middleware/rateLimit.middleware'
-import { resolveUser } from '@/orpc/server/middleware/auth.middleware'
+import { os } from '@orpc/server';
+import { BodyLimitPlugin } from '@orpc/server/fetch';
+import { API_CONSTANTS } from '@/shared/constants/api';
+import * as contracts from '@/orpc/contracts';
+import * as handlers from '@/orpc/server/handlers';
+import type { AppContext } from '@/orpc/server/context';
+import { assertEnv } from '@/orpc/server/middleware/envGuard.middleware';
+import { enforceRateLimit } from '@/orpc/server/middleware/rateLimit.middleware';
+import { resolveUser } from '@/orpc/server/middleware/auth.middleware';
 
 // Base pipeline: context typing + env guard + auth (sans rate limit)
 const baseCommon = os
@@ -24,15 +23,24 @@ const baseCommon = os
     return next({ context: ctx2 });
   });
 
+// Helper pour enrichir context avec endpoint info
+function withEndpoint(endpoint: string) {
+  return baseCommon.use(async ({ context, next }) => {
+    const enrichedContext = {
+      ...context,
+      meta: {
+        ...context.meta,
+        endpoint,
+      } as typeof context.meta & { endpoint: string },
+    };
+
+    await enforceRateLimit(enrichedContext);
+    return next({ context: enrichedContext });
+  });
+}
+
 // Pipeline pour endpoints système (pas de rate limit pour performance)
 const systemEndpoints = baseCommon;
-
-// Pipeline pour endpoints métier (avec rate limit)
-const userEndpoints = baseCommon
-  .use(async ({ context, next }) => {
-    await enforceRateLimit(context)
-    return next()
-  })
 
 export const appRouter = baseCommon.router({
   system: {
@@ -53,31 +61,39 @@ export const appRouter = baseCommon.router({
   },
 
   auth: {
-    me: userEndpoints
+    me: withEndpoint('auth.me')
       .input(contracts.auth.NoInput)
       .output(contracts.auth.MeOutput.nullable())
       .handler(async ({ context }) => handlers.auth.meHandler(context)),
-    secure: userEndpoints
+    secure: withEndpoint('auth.secure')
       .input(contracts.auth.NoInput)
       .output(contracts.auth.MeOutput)
       .handler(async ({ context }) => handlers.auth.meRequiredHandler(context)),
+    logout: withEndpoint('auth.logout')
+      .input(contracts.auth.LogoutInput)
+      .output(contracts.auth.LogoutOutput)
+      .handler(async ({ context, input }) => handlers.auth.logoutHandler(context, input)),
+    refresh: withEndpoint('auth.refresh')
+      .input(contracts.auth.RefreshInput)
+      .output(contracts.auth.RefreshOutput)
+      .handler(async ({ context }) => handlers.auth.refreshHandler(context)),
   },
 
-  debug: {
-    recent: userEndpoints
-      .input(debugContracts.ObservabilityQuery.optional())
-      .output(debugContracts.ObservabilityRecentOutput)
-      .handler(async ({ context, input }) => handlers.debug.recentHandler(context, input)),
+  profile: {
+    get: withEndpoint('profile.get')
+      .input(contracts.profile.ProfileGetInput)
+      .output(contracts.profile.ProfileGetOutput)
+      .handler(async ({ context, input }) => handlers.profile.getProfileHandler(context, input)),
 
-    stats: userEndpoints
-      .input(contracts.system.NoInput)
-      .output(debugContracts.ObservabilityStatsOutput)
-      .handler(async ({ context }) => handlers.debug.statsHandler(context)),
+    create: withEndpoint('profile.create')
+      .input(contracts.profile.ProfileCreateInput)
+      .output(contracts.profile.ProfileCreateOutput)
+      .handler(async ({ context, input }) => handlers.profile.createProfileHandler(context, input)),
 
-    openapi: userEndpoints
-      .input(contracts.system.NoInput)
-      .output(debugContracts.debugContractSchemas.openapi.output)
-      .handler(async ({ context }) => handlers.debug.openapiHandler(context)),
+    update: withEndpoint('profile.update')
+      .input(contracts.profile.ProfileUpdateInput)
+      .output(contracts.profile.ProfileUpdateOutput)
+      .handler(async ({ context, input }) => handlers.profile.updateProfileHandler(context, input)),
   },
 });
 

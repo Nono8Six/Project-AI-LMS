@@ -38,9 +38,9 @@
   --radius: 0.5rem;
   
   /* Variables marque personnalisées */
-  --brand-violet: #5B2DEE;
-  --brand-violet-dark: #3A1FB3;
-  --brand-mint: #2EE6A6;
+  --brand-violet: 254 85% 55%;
+  --brand-violet-dark: 253 70% 41%;
+  --brand-mint: 159 79% 54%;
   --focus-ring: var(--brand-mint);
   
   /* Variables layout */
