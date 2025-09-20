@@ -1,104 +1,140 @@
-# Project AI LMS
+# LMS IA - Plateforme d'Apprentissage Conversationnelle
 
-## Prerequisites
+La fondation technique est prête (RLS, orpc, services partagés), mais l'environnement reste à préparer systématiquement avant de lancer les tests ou de brancher des features métier.
 
-- Node.js: LTS (>= 22)
-- Package manager: pnpm (managed via Corepack)
-- Docker (for Supabase local development)
+## État du projet
+- 🧱 Backend sécurisé : orpc + Supabase (RLS, audit, rate-limit) opérationnels
+- ⚠️ Supabase local requis avant toute exécution de tests (`supabase start` impératif)
+- 🧪 Suite de tests versionnée mais dépend d'un environnement `.env.test`
+- 🛠️ UI métier et monitoring encore à construire
 
-## Getting Started
+## Prérequis
+- Node.js ≥ 22 (Corepack gère pnpm)
+- Docker Desktop (Supabase CLI s'appuie sur Docker)
+- Supabase CLI ≥ 2.39
+- Git
 
-### 1. Installation
-
+## Installation
 ```bash
-pnpm install                    # Install dependencies
+git clone <repository-url>
+cd Project-AI-LMS
+pnpm install
 ```
 
-### 2. Environment Setup
-
-```bash
-cp .env.example .env           # Copy environment template
-# Edit .env with your local values
-```
-
-### 3. Database Setup (Local Development)
-
-```bash
-supabase start                 # Start local Supabase
-supabase db reset             # Apply all migrations
-pnpm gen:types                # Generate TypeScript types
-```
-
-### 4. Development
-
-```bash
-pnpm dev                      # Start Next.js development server
-pnpm dev:clean                # Start with clean port check
-```
-
-> TODO : implémentation des pages Next.js reportée tant que la base Auth n’est pas validée.
-
-## Available Scripts
-
-### Development
-- `pnpm dev` - Start development server
-- `pnpm dev:clean` - Start with clean port check
-
-### Quality Assurance
-- `pnpm lint` - Run ESLint
-- `pnpm typecheck` - TypeScript type checking
-- `pnpm format` - Format with Prettier
-- `pnpm test` - Run tests
-
-### Supabase Integration Tests
-1. Ensure Supabase local is running: `supabase start` (and migrations appliquées via `supabase db reset`).
-2. Export les variables requises dans le shell de test :
+## Configuration des environnements
+1. Copier les templates :
    ```bash
-   export NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-   export NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_LOCAL"     # injecté via votre gestionnaire de secrets
-   export SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY_LOCAL" # injecté via votre gestionnaire de secrets
+   cp .env.example .env
+   cp .env.test.example .env.test   # fourni avec des valeurs de test sûres
    ```
-3. Lancer les scénarios :
+2. Régénérer les vraies clés (Supabase + Stripe) pour `.env`. Ne jamais réutiliser celles du repo.
+3. Lancer Supabase local :
    ```bash
-   pnpm vitest run tests/integration/auth.sessions.test.ts tests/integration/rateLimit.backoff.test.ts
+   supabase start
+   supabase db reset      # migrations + seed
    ```
-4. Pour la validation d’environnement :
+4. Générer (facultatif) les types :
    ```bash
-   pnpm vitest run tests/env/server-env.test.ts
+   pnpm run db:generate-types
    ```
 
-### Build & Production
-- `pnpm build` - Build for production
-- `pnpm start` - Start production server
+## Démarrage développement
+```bash
+pnpm dev
+# ou
+pnpm dev:clean    # libère les ports avant lancement
+```
+Application accessible sur http://localhost:3000.
 
-### Database
-- `pnpm gen:types` - Generate TypeScript types from Supabase
-- `supabase db reset` - Reset database with migrations
-- `supabase db push` - Push migrations to remote
+## Tests & Qualité
+### Préparation obligatoire
+- Supabase local doit être `running` (voir ci-dessus)
+- Les tests utilisent automatiquement `.env.test`
 
-### Utilities
-- `pnpm check:node` - Verify Node.js version
-- `pnpm port:free` - Free up ports
+### Commandes
+```bash
+pnpm --dir app lint            # ESLint (monorepo + app)
+pnpm --dir app typecheck       # TypeScript strict
+pnpm test                      # Vitest côté monorepo + app
+pnpm test:coverage             # Couverture globale
+pnpm test --filter route       # Vérifie health/auth/rate-limit (Supabase requis)
+```
 
-## Project Structure
+### Vérification des endpoints orpc
+1. Lancer Supabase (`supabase start`)
+2. S'assurer que `.env.test` contient les variables Supabase de test
+3. Exécuter :
+   ```bash
+   pnpm test --filter route.rpc.health.test.ts
+   pnpm test --filter route.auth.me.test.ts
+   pnpm test --filter route.ratelimit.test.ts
+   ```
+Chaque test confirme que les endpoints renvoient 200 et propagent `x-request-id` + headers rate-limit.
 
-- `app/` - Next.js 15 application
-- `supabase/` - Database migrations and configuration
-- `docs/` - Project documentation
-- `scripts/` - Build and utility scripts
-- `tests/` - Test files
+## Maintenance rate-limit
+Un script de maintenance supprime les compteurs obsolètes :
+```bash
+pnpm cleanup:rate-limit   # utilise SUPABASE_SERVICE_ROLE_KEY
+```
+À planifier dans une cron (toutes les heures par exemple) pour garder `auth_rate_limit_counters` sain.
 
-## Conventions
+## Scripts disponibles
+| Script | Description |
+| --- | --- |
+| `pnpm dev` | Démarrage développement (App Router + Supabase requis) |
+| `pnpm build` / `pnpm start` | Build/serveur prod |
+| `pnpm lint` / `pnpm typecheck` | Qualité côté monorepo + app |
+| `pnpm test` | Tests (vitest) |
+| `pnpm supabase:start` / `pnpm supabase:stop` | Gestion Supabase local |
+| `pnpm cleanup:rate-limit` | Purge des compteurs rate-limit obsolètes |
 
-- Package manager pinned via `packageManager: pnpm@10.15.1` in `package.json`
-- Lockfile `pnpm-lock.yaml` should be committed
-- No `package-lock.json` or `yarn.lock` (see `.gitignore` and `.npmrc`)
-- TypeScript strict mode enabled
-- ESLint + Prettier for code quality
+## Structure principale
+```
+Project-AI-LMS/
+├── app/                # Application Next.js 15
+│   ├── src/orpc/       # Contrats, handlers, middleware oRPC
+│   ├── src/shared/     # Services, utils, types partagés
+│   └── ...
+├── supabase/           # Migrations SQL + seed + config
+├── tests/              # env / integration / unit
+├── docs/               # Stack technique, guide Supabase, audit
+└── scripts/            # Utilitaires CLI (check-node, cleanup, ...)
+```
 
-## Upgrade Tooling
+## Architecture (rappel)
+- Next.js 15 (RSC par défaut)
+- orpc pour les endpoints (validation Zod & typage end-to-end)
+- Supabase PostgreSQL (RLS activé, audit immutable, brute force & rate-limit)
+- Tailwind + tokens HSL + shadcn/ui
+- Vitest pour les tests unitaires/intégration
 
-- Update pnpm: `corepack prepare pnpm@latest --activate`
-- Update Node LTS: `winget upgrade OpenJS.NodeJS.LTS -e`
+## Sécurité
+- CSP stricte + nonce via middleware
+- Headers de sécurité (HSTS, X-Frame-Options, …)
+- Sessions Supabase avec TTL + révocation universelle
+- Audit service centralisé (auth + sécurité)
+- Rate-limit déterministe (observabilité incluse)
 
+## Troubleshooting
+| Problème | Solution |
+| --- | --- |
+| Tests échouent (`SERVICE_ROLE_NOT_CONFIGURED`) | Assurez-vous que Supabase tourne et que `.env.test` contient une clé service role de test |
+| Ports occupés | `pnpm port:free` puis `pnpm dev:clean` |
+| Base locale désynchronisée | `supabase stop && supabase start && supabase db reset` |
+| Rate-limit gonflés | `pnpm cleanup:rate-limit` |
 
+## Documentation
+- `docs/STACK_TECHNIQUE.md` – Architecture détaillée (sans ancienne interface debug)
+- `docs/SUPABASE_LOCAL.md` – Setup Supabase complet + rotation des secrets
+- `docs/TODO/AUDIT_FIX_PLAN.md` – Roadmap de remédiation
+
+## Contribution
+Avant ouverture de PR :
+1. `pnpm --dir app lint`
+2. `pnpm --dir app typecheck`
+3. `pnpm test` (Supabase actif)
+4. Mise à jour de la doc si comportement modifié
+
+---
+
+Dernière mise à jour : septembre 2025

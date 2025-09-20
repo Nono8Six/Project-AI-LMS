@@ -31,7 +31,8 @@
     "db:push": "supabase db push",
     "orpc:check": "pnpm --dir app orpc:check",
     "orpc:gen": "pnpm --dir app orpc:gen",
-    "orpc:docs": "pnpm --dir app orpc:docs"
+    "orpc:docs": "pnpm --dir app orpc:docs",
+    "cleanup:rate-limit": "node scripts/cleanup-rate-limit.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.34.0",
@@ -40,6 +41,7 @@
     "@typescript-eslint/parser": "^8.42.0",
     "@vitest/coverage-v8": "^3.2.4",
     "cross-env": "^7.0.3",
+    "dotenv": "^16.6.1",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2",

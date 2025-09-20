@@ -15,15 +15,58 @@ import { createProfileService } from '@/shared/services/supabase/profile.service
  * Validation complète avec nouveau ProfileSchema (11 colonnes)
  */
 export async function getProfileHandler(ctx: AppContext, input: { id: string }) {
-  ctx.logger.info('getProfileHandler called', { userId: input.id });
+  ctx.logger.info('getProfileHandler called', {
+    userId: input.id,
+    requesterId: ctx.user?.id,
+    isOwnProfile: ctx.user?.id === input.id
+  });
+
+  // SÉCURITÉ: Vérifier l'authentification
+  if (!ctx.user) {
+    throw new ORPCError('UNAUTHORIZED');
+  }
+
+  // SÉCURITÉ: Vérifier l'ownership ou permissions admin
+  const isOwnProfile = ctx.user.id === input.id;
+  const isAdmin = ctx.user.permissions?.includes('admin:read:profiles');
+
+  if (!isOwnProfile && !isAdmin) {
+    ctx.logger.warn('Unauthorized profile access attempt', {
+      requesterId: ctx.user.id,
+      targetUserId: input.id,
+      hasAdminPermissions: isAdmin
+    });
+    throw new ORPCError('FORBIDDEN');
+  }
 
   try {
-    const adminClient = ctx.supabase.getAdminClient();
-    const profileService = createProfileService(adminClient);
+    // Utiliser le client utilisateur pour les requêtes own profile (RLS)
+    // Ou admin client seulement pour les admins
+    const client = isAdmin ? ctx.supabase.getAdminClient() : ctx.supabase.getUserClient();
+    if (!client) {
+      throw new ORPCError('INTERNAL_SERVER_ERROR');
+    }
+    const profileService = createProfileService(client);
+
+    ctx.logger.debug('Fetching profile from database', {
+      userId: input.id,
+      hasClient: !!client,
+      hasProfileService: !!profileService,
+      usingAdminClient: isAdmin
+    });
+
     const { data, error } = await profileService.getProfile(input.id);
 
     if (error) {
-      ctx.logger.error('Database error', { error, userId: input.id });
+      ctx.logger.error('Database error in getProfile', {
+        error: {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        },
+        userId: input.id
+      });
       throw new ORPCError('INTERNAL_SERVER_ERROR');
     }
 
@@ -32,16 +75,35 @@ export async function getProfileHandler(ctx: AppContext, input: { id: string }) 
       return null;
     }
 
+    ctx.logger.debug('Profile data retrieved', {
+      userId: input.id,
+      hasData: !!data,
+      dataKeys: Object.keys(data),
+      role: data.role,
+      status: data.status
+    });
+
     // Validation schema avec toutes les 11 colonnes
     return ProfileSchema.parse(data);
   } catch (error) {
     // Gestion spécifique erreurs de parsing schema
     if (error instanceof Error && error.name === 'ZodError') {
-      ctx.logger.error('Schema validation error', { error: error.message, userId: input.id });
+      ctx.logger.error('Schema validation error', {
+        error: error.message,
+        userId: input.id,
+        errorDetails: error.message
+      });
       throw new ORPCError('INTERNAL_SERVER_ERROR');
     }
 
-    ctx.logger.error('Profile handler error', { error, userId: input.id });
+    ctx.logger.error('Profile handler error', {
+      error: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      } : error,
+      userId: input.id
+    });
     throw new ORPCError('INTERNAL_SERVER_ERROR');
   }
 }
@@ -53,19 +115,62 @@ export async function getProfileHandler(ctx: AppContext, input: { id: string }) 
 export async function createProfileHandler(ctx: AppContext, input: ProfileCreateRequest) {
   ctx.logger.info('createProfileHandler called', { userId: input.id });
 
+  // SÉCURITÉ: Vérifier l'authentification
+  if (!ctx.user) {
+    throw new ORPCError('UNAUTHORIZED');
+  }
+
+  // SÉCURITÉ: Vérifier que l'utilisateur crée son propre profil ou est admin
+  const isOwnProfile = ctx.user.id === input.id;
+  const isAdmin = ctx.user.permissions?.includes('admin:create:profiles');
+
+  if (!isOwnProfile && !isAdmin) {
+    ctx.logger.warn('Unauthorized profile creation attempt', {
+      requesterId: ctx.user.id,
+      targetUserId: input.id,
+      hasAdminPermissions: isAdmin
+    });
+    throw new ORPCError('FORBIDDEN');
+  }
+
   // Validation input avec nouveau schema complet
   const validatedInput = ProfileCreateSchema.parse(input);
 
+  // SÉCURITÉ: Empêcher escalation de privilèges
+  // Seuls les admins peuvent créer des profils avec role != 'member'
+  if (validatedInput.role && validatedInput.role !== 'member' && !isAdmin) {
+    ctx.logger.warn('Privilege escalation attempt in profile creation', {
+      requesterId: ctx.user.id,
+      attemptedRole: validatedInput.role
+    });
+    throw new ORPCError('FORBIDDEN');
+  }
+
+  // SÉCURITÉ: Empêcher modification de status pour non-admins
+  if (validatedInput.status && validatedInput.status !== 'active' && !isAdmin) {
+    ctx.logger.warn('Status modification attempt in profile creation', {
+      requesterId: ctx.user.id,
+      attemptedStatus: validatedInput.status
+    });
+    throw new ORPCError('FORBIDDEN');
+  }
+
   try {
-    const adminClient = ctx.supabase.getAdminClient();
-    const profileService = createProfileService(adminClient);
-    // Construire les données pour Supabase avec valeurs par défaut
+    // Utiliser le client approprié selon les permissions
+    const client = isAdmin ? ctx.supabase.getAdminClient() : ctx.supabase.getUserClient();
+    if (!client) {
+      throw new ORPCError('INTERNAL_SERVER_ERROR');
+    }
+    const profileService = createProfileService(client);
+
+    // Construire les données pour Supabase avec valeurs par défaut SÉCURISÉES
     const profileData: Database['public']['Tables']['user_profiles']['Insert'] = {
       id: validatedInput.id,
       full_name: validatedInput.full_name,
-      // Champs avec valeurs par défaut explicites si non fournis
-      role: validatedInput.role ?? 'member',
-      status: validatedInput.status ?? 'active',
+      // SÉCURITÉ: Role forcé à 'member' sauf pour les admins
+      role: isAdmin ? (validatedInput.role ?? 'member') : 'member',
+      // SÉCURITÉ: Status forcé à 'active' sauf pour les admins
+      status: isAdmin ? (validatedInput.status ?? 'active') : 'active',
       referrer_id: validatedInput.referrer_id ?? null,
       onboarding_completed: validatedInput.onboarding_completed ?? false,
       consents: validatedInput.consents ?? {
@@ -123,24 +228,73 @@ export async function createProfileHandler(ctx: AppContext, input: ProfileCreate
 export async function updateProfileHandler(ctx: AppContext, input: { id: string; updates: ProfileUpdateRequest }) {
   ctx.logger.info('updateProfileHandler called', { userId: input.id });
 
+  // SÉCURITÉ: Vérifier l'authentification
+  if (!ctx.user) {
+    throw new ORPCError('UNAUTHORIZED');
+  }
+
+  // SÉCURITÉ: Vérifier l'ownership ou permissions admin
+  const isOwnProfile = ctx.user.id === input.id;
+  const isAdmin = ctx.user.permissions?.includes('admin:update:profiles');
+
+  if (!isOwnProfile && !isAdmin) {
+    ctx.logger.warn('Unauthorized profile update attempt', {
+      requesterId: ctx.user.id,
+      targetUserId: input.id,
+      hasAdminPermissions: isAdmin
+    });
+    throw new ORPCError('FORBIDDEN');
+  }
+
   // Validation input
   const validatedUpdates = ProfileUpdateSchema.parse(input.updates);
 
+  // SÉCURITÉ: Empêcher escalation de privilèges pour non-admins
+  if (!isAdmin) {
+    if (validatedUpdates.role !== undefined) {
+      ctx.logger.warn('Role modification attempt by non-admin', {
+        requesterId: ctx.user.id,
+        targetUserId: input.id,
+        attemptedRole: validatedUpdates.role
+      });
+      throw new ORPCError('FORBIDDEN');
+    }
+
+    if (validatedUpdates.status !== undefined) {
+      ctx.logger.warn('Status modification attempt by non-admin', {
+        requesterId: ctx.user.id,
+        targetUserId: input.id,
+        attemptedStatus: validatedUpdates.status
+      });
+      throw new ORPCError('FORBIDDEN');
+    }
+  }
+
   try {
-    const adminClient = ctx.supabase.getAdminClient();
-    const profileService = createProfileService(adminClient);
+    // Utiliser le client approprié selon les permissions
+    const client = isAdmin ? ctx.supabase.getAdminClient() : ctx.supabase.getUserClient();
+    if (!client) {
+      throw new ORPCError('INTERNAL_SERVER_ERROR');
+    }
+    const profileService = createProfileService(client);
+
     // Filtrer les champs undefined et convertir types pour Database
     const updateData: Database['public']['Tables']['user_profiles']['Update'] = {};
 
     if (validatedUpdates.full_name !== undefined) {
       updateData.full_name = validatedUpdates.full_name;
     }
-    if (validatedUpdates.role !== undefined) {
-      updateData.role = validatedUpdates.role;
+
+    // SÉCURITÉ: Role et status seulement pour les admins (double vérification)
+    if (isAdmin) {
+      if (validatedUpdates.role !== undefined) {
+        updateData.role = validatedUpdates.role;
+      }
+      if (validatedUpdates.status !== undefined) {
+        updateData.status = validatedUpdates.status;
+      }
     }
-    if (validatedUpdates.status !== undefined) {
-      updateData.status = validatedUpdates.status;
-    }
+
     if (validatedUpdates.referrer_id !== undefined) {
       updateData.referrer_id = validatedUpdates.referrer_id;
     }

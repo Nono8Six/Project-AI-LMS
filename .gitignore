@@ -23,6 +23,7 @@ Thumbs.db
 .env.development
 .env.production
 .env.saved
+.mcp.json
 # Allow .env.test for reproductible test environment
 !.env.test
 

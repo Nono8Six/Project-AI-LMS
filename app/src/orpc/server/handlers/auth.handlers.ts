@@ -5,22 +5,66 @@ import { SessionService } from '@/shared/services/session.service';
 import { AuditService } from '@/shared/services/audit.service';
 
 export async function meHandler(ctx: AppContext) {
-  if (!ctx.user) return null;
+  ctx.logger.debug('meHandler called', {
+    hasUser: !!ctx.user,
+    hasAuth: !!ctx.headers['authorization'],
+    hasAccessToken: !!ctx.session.accessToken
+  });
+
+  if (!ctx.user) {
+    ctx.logger.debug('No user found in context', {
+      sessionTokens: {
+        hasAccessToken: !!ctx.session.accessToken,
+        hasRefreshToken: !!ctx.session.refreshToken
+      }
+    });
+    return null;
+  }
+
   const out = {
     id: ctx.user.id,
     email: ctx.user.email ?? null,
     role: ctx.user.profile?.role ?? null
   };
+
+  ctx.logger.debug('User data resolved', {
+    userId: ctx.user.id,
+    hasProfile: !!ctx.user.profile,
+    role: ctx.user.profile?.role
+  });
+
   return MeOutput.nullable().parse(out);
 }
 
 export async function meRequiredHandler(ctx: AppContext) {
-  if (!ctx.user) throw new ORPCError('UNAUTHORIZED');
+  ctx.logger.debug('meRequiredHandler called', {
+    hasUser: !!ctx.user,
+    hasAuth: !!ctx.headers['authorization'],
+    hasAccessToken: !!ctx.session.accessToken
+  });
+
+  if (!ctx.user) {
+    ctx.logger.warn('Unauthorized access attempt', {
+      hasAuth: !!ctx.headers['authorization'],
+      hasAccessToken: !!ctx.session.accessToken,
+      hasRefreshToken: !!ctx.session.refreshToken,
+      ip: ctx.meta.ip,
+      userAgent: ctx.meta.userAgent
+    });
+    throw new ORPCError('UNAUTHORIZED');
+  }
+
   const out = {
     id: ctx.user.id,
     email: ctx.user.email ?? null,
     role: ctx.user.profile?.role ?? null
   };
+
+  ctx.logger.debug('Secure endpoint access granted', {
+    userId: ctx.user.id,
+    role: ctx.user.profile?.role
+  });
+
   return MeOutput.parse(out);
 }
 
@@ -119,7 +163,20 @@ export async function refreshHandler(ctx: AppContext) {
   const token = extractToken(ctx.headers) ?? ctx.session.accessToken ?? undefined;
   const refreshToken = ctx.session.refreshToken;
 
+  ctx.logger.debug('refreshHandler called', {
+    hasToken: !!token,
+    hasRefreshToken: !!refreshToken,
+    hasAuthHeader: !!ctx.headers['authorization'],
+    hasAccessTokenSession: !!ctx.session.accessToken
+  });
+
   if (!token || !refreshToken) {
+    ctx.logger.warn('Refresh attempted without required tokens', {
+      hasToken: !!token,
+      hasRefreshToken: !!refreshToken,
+      tokenSource: token === ctx.session.accessToken ? 'session' :
+                   token === extractToken(ctx.headers) ? 'header' : 'none'
+    });
     return RefreshOutput.parse({
       success: false,
       needsRefresh: false,
@@ -135,9 +192,26 @@ export async function refreshHandler(ctx: AppContext) {
       ...(ctx.meta.ip ? { ipAddress: ctx.meta.ip } : {})
     };
     const adminClient = ctx.supabase.getAdminClient();
+
+    ctx.logger.debug('Validating session for refresh', {
+      sessionContext,
+      hasAdminClient: !!adminClient
+    });
+
     const sessionValidation = await SessionService.validateSession(token, sessionContext, adminClient);
 
+    ctx.logger.debug('Session validation result', {
+      isValid: sessionValidation.isValid,
+      needsRefresh: sessionValidation.needsRefresh,
+      reason: sessionValidation.reason,
+      hasMetadata: !!sessionValidation.metadata
+    });
+
     if (!sessionValidation.isValid) {
+      ctx.logger.warn('Session validation failed', {
+        reason: sessionValidation.reason,
+        userId: ctx.user?.id
+      });
       return RefreshOutput.parse({
         success: false,
         needsRefresh: true,

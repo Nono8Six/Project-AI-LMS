@@ -575,3 +575,11 @@ Structure préparée pour une évolution vers:
 - API publique (logique métier découplée)
 - Application mobile (core réutilisable)
 - Multi-tenancy (isolation des données déjà en place)
+
+## Exécution des tests (supabase requis)
+
+- Toujours démarrer Supabase local avant les tests : `supabase start`
+- Charger `.env.test` (fourni) pour disposer des clés/service role de test
+- Lancer `pnpm test --filter route` pour vérifier health/auth/rate-limit
+- Utiliser `pnpm cleanup:rate-limit` après une campagne de tests intensive
+

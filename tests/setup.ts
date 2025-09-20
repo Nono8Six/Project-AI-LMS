@@ -13,7 +13,7 @@ beforeAll(async () => {
   loadEnvConfig(projectDir, true, { info: () => {}, error: () => {} });
 
   // S'assurer que NODE_ENV est configuré pour les tests
-  process.env.NODE_ENV = 'test';
+  (process.env as any).NODE_ENV = 'test';
 
   // Charger explicitement .env.test si disponible
   try {

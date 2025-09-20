@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { AUTH_LOGIN_PATH, UNAUTHORIZED_PATH, isAdminRoute, isMemberRoute } from '@/shared/constants/routes'
+import { AUTH_LOGIN_PATH, isAdminRoute, isMemberRoute } from '@/shared/constants/routes'
 import { buildConnectSrcDomains, buildFrameSrcDomains, getSecurityConfig, getDomainsConfig, isProduction } from '@/shared/utils/config'
 import { applySecurityHeaders } from '@/shared/utils/security'
 
@@ -77,26 +77,25 @@ export function middleware(request: NextRequest) {
     return res
   }
 
-  // Détection minimale basée cookies Supabase (si présents)
-  const accessToken = request.cookies.get('sb-access-token')?.value
-  const userRole = request.cookies.get('sb-role')?.value
-  const isAuthenticated = Boolean(accessToken)
-  const isAdmin = userRole === 'admin'
+  // SÉCURISÉ: Le middleware ne fait plus de vérification auth basée sur les cookies
+  // car ceux-ci sont contrôlés côté client et donc non fiables.
+  // La vraie validation auth se fait dans oRPC middleware côté serveur.
 
-  // Protection routes admin
-  if (isAdminRoute(pathname) && !isAdmin) {
-    const res = NextResponse.redirect(new URL(UNAUTHORIZED_PATH, request.url))
-    if (securityConfig.cspUseNonce) applyCSP(res, nonce, isProd)
-    applySecurityHeaders(res, pathname)
-    return res
-  }
+  // Protection basique: rediriger toutes les routes protégées vers login
+  // La vraie validation se fera côté serveur dans orpc middleware
+  if (isAdminRoute(pathname) || isMemberRoute(pathname)) {
+    // Vérifier seulement la présence d'un token pour éviter redirections inutiles
+    const accessToken = request.cookies.get('sb-access-token')?.value
 
-  // Protection routes membres
-  if (isMemberRoute(pathname) && !isAuthenticated) {
-    const res = NextResponse.redirect(new URL(AUTH_LOGIN_PATH, request.url))
-    if (securityConfig.cspUseNonce) applyCSP(res, nonce, isProd)
-    applySecurityHeaders(res, pathname)
-    return res
+    if (!accessToken) {
+      const res = NextResponse.redirect(new URL(AUTH_LOGIN_PATH, request.url))
+      if (securityConfig.cspUseNonce) applyCSP(res, nonce, isProd)
+      applySecurityHeaders(res, pathname)
+      return res
+    }
+
+    // Le token existe, laisser passer - la vraie validation se fera dans oRPC
+    // Note: On ne fait plus confiance au sb-role cookie pour déterminer les permissions admin
   }
 
   const res = NextResponse.next({ request: { headers: requestHeaders } })

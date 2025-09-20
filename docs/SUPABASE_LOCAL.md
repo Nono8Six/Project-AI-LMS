@@ -372,3 +372,9 @@ export function buildContext(...) {
 ---
 
 **Note** : Ce guide couvre l'environnement de développement local. Pour la production, référez-vous à la documentation de déploiement.
+## Tests automatisés
+
+- Démarrer Supabase (`supabase start`) avant `pnpm test`
+- Utiliser `.env.test` (ou `.env.test.example`) pour injecter les clés de test
+- Les tests orpc (`tests/route.*.ts`) valident les endpoints health/auth/rate-limit et demandent Supabase actif
+- Après une campagne de tests, exécuter `pnpm cleanup:rate-limit` pour purger `auth_rate_limit_counters`

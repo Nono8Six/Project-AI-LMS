@@ -14,17 +14,20 @@ function getVersion(): string {
   return appPkg.version ?? '0.0.0';
 }
 
-export async function healthHandler(_ctx: AppContext) {
+export async function healthHandler(ctx: AppContext) {
+  ctx.logger.debug('healthHandler called', { requestId: ctx.meta.requestId });
   const out = { status: 'ok' as const, version: getVersion(), time: nowISO() };
   return HealthOutput.parse(out);
 }
 
-export async function timeHandler(_ctx: AppContext) {
+export async function timeHandler(ctx: AppContext) {
+  ctx.logger.debug('timeHandler called', { requestId: ctx.meta.requestId });
   const out = { now: nowISO() };
   return TimeOutput.parse(out);
 }
 
-export async function versionHandler(_ctx: AppContext) {
+export async function versionHandler(ctx: AppContext) {
+  ctx.logger.debug('versionHandler called', { requestId: ctx.meta.requestId });
   const out = { version: getVersion() };
   return VersionOutput.parse(out);
 }

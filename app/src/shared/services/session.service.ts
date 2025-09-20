@@ -203,6 +203,24 @@ export class SessionService {
       return { isValid: false, needsRefresh: true, reason: 'TOKEN_EXPIRED' };
     }
 
+    // SÉCURITÉ: Vérifier avec Supabase auth AVANT de faire confiance au JWT
+    // Cela empêche l'insertion de sessions forgées dans la base
+    try {
+      const { data: authData, error: authError } = await adminClient.auth.getUser(token);
+
+      if (authError || !authData?.user) {
+        return { isValid: false, needsRefresh: true, reason: 'SUPABASE_AUTH_FAILED' };
+      }
+
+      // Vérifier que l'userId du JWT correspond à celui de Supabase
+      if (authData.user.id !== userId) {
+        return { isValid: false, needsRefresh: false, reason: 'TOKEN_USER_MISMATCH' };
+      }
+    } catch {
+      return { isValid: false, needsRefresh: true, reason: 'SUPABASE_AUTH_ERROR' };
+    }
+
+    // Maintenant on peut faire confiance au token et upsert la session
     const metadata: SessionMetadata = {
       userId,
       sessionId,

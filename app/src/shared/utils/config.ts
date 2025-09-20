@@ -48,7 +48,10 @@ export function getSecurityConfig(): SecurityConfig {
     cspReportOnly: process.env.CSP_REPORT_ONLY === 'true',
     cspAllowInlineStyle: process.env.CSP_ALLOW_INLINE_STYLE === 'true',
     cspUseNonce: process.env.CSP_USE_NONCE === 'true',
-    enableAuthMiddleware: process.env.NEXT_PUBLIC_ENABLE_AUTH_MIDDLEWARE === 'true',
+    // SÉCURISÉ: Variable serveur-only avec défaut sécurisé (true)
+    // Le middleware auth est activé par défaut en production
+    // Peut être désactivé explicitement avec DISABLE_AUTH_MIDDLEWARE=true
+    enableAuthMiddleware: process.env.DISABLE_AUTH_MIDDLEWARE !== 'true',
   };
 }
 

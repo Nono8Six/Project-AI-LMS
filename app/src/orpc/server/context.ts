@@ -248,6 +248,7 @@ function buildAdminClient(): SupabaseClient<Database> {
 
 // Main builder
 export function buildContext(input: BuildContextInput): AppContext {
+  const startTime = Date.now();
   const headersObj = headersToObject(input.headers);
   const cookies = parseCookies(headersObj['cookie']);
   const accessTokenCookie = cookies['sb-access-token'] ?? null;
@@ -259,14 +260,56 @@ export function buildContext(input: BuildContextInput): AppContext {
   const requestId = headersObj['x-request-id'] || safeRandomUUID();
   const logger = createLogger(requestId);
 
+  // Log context creation start with diagnostic info
+  logger.debug('Building context', {
+    ip: input.ip,
+    userAgent: headersObj['user-agent'],
+    hasAuthHeader: !!headersObj['authorization'],
+    hasAccessTokenCookie: !!accessTokenCookie,
+    hasRefreshTokenCookie: !!refreshTokenCookie,
+    headerCount: Object.keys(headersObj).length
+  });
+
   // Lazy loading pour user client (créé seulement si nécessaire)
   let _userClient: SupabaseClient<Database> | undefined | null = null;
   const getUserClient = (): SupabaseClient<Database> | undefined => {
     if (_userClient === null) {
-      _userClient = maybeCreateSupabaseUserClient(headersObj);
+      try {
+        _userClient = maybeCreateSupabaseUserClient(headersObj);
+        logger.debug('User client created', {
+          success: !!_userClient,
+          hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        });
+      } catch (error) {
+        logger.error('Failed to create user client', {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        _userClient = undefined;
+      }
     }
     return _userClient || undefined;
   };
+
+  // Test admin client creation early for diagnostics
+  try {
+    const adminClient = buildAdminClient();
+    logger.debug('Admin client validated', {
+      hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    });
+  } catch (error) {
+    logger.error('Admin client creation failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    });
+  }
+
+  const buildTime = Date.now() - startTime;
+  logger.debug('Context build completed', {
+    buildTimeMs: buildTime,
+    requestId
+  });
 
   return {
     meta: {
