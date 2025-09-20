@@ -1,130 +1,116 @@
-import type { AppContext } from '../context'
-import { ORPCError } from '@orpc/client'
-import type { UpstashRedisClient, UpstashRedisConstructor } from '@/shared/types/redis.types'
-import { Redis as UpstashRedis } from '@upstash/redis'
+import type { AppContext } from '../context';
+import { ORPCError } from '@orpc/client';
+import { AUTH_ACTION_RATE_LIMITS } from '@/shared/constants/api';
+import { consumeRateLimit, cleanupRateLimitEntries } from '@/shared/services/security.service';
+import { AuditService } from '@/shared/services/audit.service';
 
-interface RateLimitResult {
-  allowed: boolean
-  retryAfterSeconds: number
-  remaining: number
-  limit: number
-  resetAtEpochSeconds: number
+// Compteur déterministe pour le nettoyage périodique
+let cleanupCallCounter = 0;
+const CLEANUP_INTERVAL = 100; // Nettoyage tous les 100 appels
+
+function getAuthActionType(endpoint?: string): keyof typeof AUTH_ACTION_RATE_LIMITS | null {
+  if (!endpoint) return null;
+  const authActionMap: Record<string, keyof typeof AUTH_ACTION_RATE_LIMITS> = {
+    'auth.signup': 'signup',
+    'auth.signin': 'login',
+    'auth.login': 'login',
+    'auth.logout': 'logout',
+    'auth.refresh': 'refresh',
+    'auth.resetPassword': 'passwordReset',
+    'auth.forgotPassword': 'passwordReset',
+  };
+  return authActionMap[endpoint] || null;
 }
 
-interface RateLimiter {
-  consume(key: string, budget: number): Promise<RateLimitResult> | RateLimitResult
+function isExemptIP(ip: string | null, exemptIPs: string[]): boolean {
+  if (!ip) return false;
+  return exemptIPs.includes(ip) || exemptIPs.includes('*');
 }
 
-class MemoryFixedWindowLimiter implements RateLimiter {
-  private readonly store = new Map<string, { count: number; windowStart: number }>()
-
-  consume(key: string, budget: number): RateLimitResult {
-    const now = Date.now()
-    const windowStart = Math.floor(now / 60000) * 60000 // minute window
-    const rec = this.store.get(key)
-    if (!rec || rec.windowStart !== windowStart) {
-      this.store.set(key, { count: 1, windowStart })
-      return {
-        allowed: true,
-        retryAfterSeconds: 0,
-        remaining: Math.max(0, budget - 1),
-        limit: budget,
-        resetAtEpochSeconds: Math.floor((windowStart + 60000) / 1000),
-      }
-    }
-    if (rec.count < budget) {
-      rec.count += 1
-      return {
-        allowed: true,
-        retryAfterSeconds: 0,
-        remaining: Math.max(0, budget - rec.count),
-        limit: budget,
-        resetAtEpochSeconds: Math.floor((windowStart + 60000) / 1000),
-      }
-    }
-    const msUntilReset = 60000 - (now - rec.windowStart)
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.ceil(msUntilReset / 1000),
-      remaining: 0,
-      limit: budget,
-      resetAtEpochSeconds: Math.floor((rec.windowStart + 60000) / 1000),
-    }
+function buildRateLimitKey(userId: string | null, ip: string | null, endpoint: string | undefined): string {
+  if (endpoint) {
+    if (userId) return `auth:${endpoint}:user:${userId}`;
+    if (ip) return `auth:${endpoint}:ip:${ip}`;
+    return `auth:${endpoint}:anonymous`;
   }
+
+  if (userId) return `user:${userId}`;
+  if (ip) return `ip:${ip}`;
+  return 'anonymous';
 }
-
-const limiter = new MemoryFixedWindowLimiter()
-
-class RedisFixedWindowLimiter implements RateLimiter {
-  constructor(private readonly client: UpstashRedisClient) {}
-
-  async consume(key: string, budget: number): Promise<RateLimitResult> {
-    const now = Date.now()
-    const windowStart = Math.floor(now / 60000) * 60000
-    const redisKey = `rl:${key}:${windowStart}`
-    // INCR and set expiry of 60s on first hit
-    const count = await this.client.incr(redisKey)
-    if (count === 1) {
-      await this.client.expire(redisKey, 60)
-    }
-    if (count <= budget) {
-      return {
-        allowed: true,
-        retryAfterSeconds: 0,
-        remaining: Math.max(0, budget - count),
-        limit: budget,
-        resetAtEpochSeconds: Math.floor((windowStart + 60000) / 1000),
-      }
-    }
-    const msUntilReset = 60000 - (now - windowStart)
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.ceil(msUntilReset / 1000),
-      remaining: 0,
-      limit: budget,
-      resetAtEpochSeconds: Math.floor((windowStart + 60000) / 1000),
-    }
-  }
-}
-
-export type RateLimitIdentity = {
-  key: string; // user-id or ip
-  budget: number;
-};
-
-function buildLimiter(): RateLimiter {
-  const provider = (process.env.RATE_LIMIT_PROVIDER || 'memory').toLowerCase()
-  if (provider === 'redis') {
-    const url = process.env.UPSTASH_REDIS_REST_URL
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN
-    if (url && token) {
-      // Construct a typed client from the ESM import
-      const Ctor = UpstashRedis as unknown as UpstashRedisConstructor
-      const client = new Ctor({ url, token })
-      return new RedisFixedWindowLimiter(client)
-    }
-  }
-  return limiter
-}
-
-const chosenLimiter = buildLimiter()
 
 export async function enforceRateLimit(ctx: AppContext): Promise<void> {
-  const userId = ctx.user?.id ?? null
-  const key = userId ?? ctx.meta.ip ?? 'unknown'
-  const budget = userId ? ctx.config.rateLimits.userPerMin : ctx.config.rateLimits.anonymousPerMin
-  const res = await chosenLimiter.consume(String(key), budget)
+  const userId = ctx.user?.id ?? null;
+  const ip = ctx.meta.ip;
+  const endpoint = ctx.meta.endpoint;
+  const { rateLimits } = ctx.config;
+  const adminClient = ctx.supabase.getAdminClient();
 
-  // Expose rate limit meta for adapters to set headers
-  ctx.meta.rateLimit = {
-    limit: res.limit,
-    remaining: res.remaining,
-    reset: res.resetAtEpochSeconds,
+  if (ip && isExemptIP(ip, rateLimits.exemptIPs)) {
+    ctx.logger.debug('IP exempted from rate limiting', { ip, endpoint });
+    return;
   }
 
-  if (!res.allowed) {
-    ctx.logger.warn('Rate limited', { key, budget, retryAfterSeconds: res.retryAfterSeconds })
-    ctx.meta.rateLimitRetryAfter = res.retryAfterSeconds
-    throw new ORPCError('TOO_MANY_REQUESTS')
+  const authActionType = getAuthActionType(endpoint);
+  const budget = authActionType
+    ? rateLimits.authActions[authActionType]
+    : userId
+      ? rateLimits.userPerMin
+      : rateLimits.anonymousPerMin;
+
+  const key = buildRateLimitKey(userId, ip, endpoint);
+  ctx.meta.rateLimitKey = key;
+
+  // Nettoyage déterministe tous les CLEANUP_INTERVAL appels
+  cleanupCallCounter++;
+  if (cleanupCallCounter >= CLEANUP_INTERVAL) {
+    cleanupCallCounter = 0;
+    await cleanupRateLimitEntries(adminClient);
+    ctx.logger.debug('Rate limit cleanup executed', {
+      interval: CLEANUP_INTERVAL,
+      endpoint
+    });
+  }
+
+  const result = await consumeRateLimit(adminClient, key, budget, endpoint ?? null);
+
+  ctx.meta.rateLimit = {
+    limit: result.limit,
+    remaining: result.remaining,
+    reset: result.resetAtEpochSeconds,
+  };
+
+  if (!result.allowed) {
+    ctx.logger.warn('Rate limited', {
+      key,
+      budget,
+      endpoint,
+      authActionType,
+      retryAfterSeconds: result.retryAfterSeconds,
+    });
+
+    ctx.meta.rateLimitRetryAfter = result.retryAfterSeconds;
+
+    if (authActionType) {
+      const auditContext = AuditService.createContext(
+        ctx.meta.requestId,
+        ip || undefined,
+        ctx.headers['user-agent'] || undefined,
+        userId || undefined
+      );
+
+      await AuditService.logSecurity(
+        adminClient,
+        'security.rate_limit_exceeded',
+        {
+          ...auditContext,
+          riskLevel: 'HIGH',
+          threatType: 'rate_limit',
+        },
+        ctx.logger
+      );
+    }
+
+    throw new ORPCError('TOO_MANY_REQUESTS');
   }
 }
