@@ -9,6 +9,7 @@ import type { AppContext } from '@/orpc/server/context';
 import { ORPCError } from '@orpc/client';
 import type { Database, Json } from '@/shared/types/database.generated';
 import { createProfileService } from '@/shared/services/supabase/profile.service';
+import { PERMISSIONS, PermissionService } from '@/shared/services/permission.service';
 
 /**
  * Handler pour récupérer un profil utilisateur
@@ -28,13 +29,14 @@ export async function getProfileHandler(ctx: AppContext, input: { id: string }) 
 
   // SÉCURITÉ: Vérifier l'ownership ou permissions admin
   const isOwnProfile = ctx.user.id === input.id;
-  const isAdmin = ctx.user.permissions?.includes('admin:read:profiles');
+  const userPermissions = ctx.user.permissions ?? [];
+  const canManageProfiles = PermissionService.isAdmin(ctx.user.profile) || userPermissions.includes(PERMISSIONS.ADMIN_USERS);
 
-  if (!isOwnProfile && !isAdmin) {
+  if (!isOwnProfile && !canManageProfiles) {
     ctx.logger.warn('Unauthorized profile access attempt', {
       requesterId: ctx.user.id,
       targetUserId: input.id,
-      hasAdminPermissions: isAdmin
+      hasAdminPermissions: canManageProfiles
     });
     throw new ORPCError('FORBIDDEN');
   }
@@ -42,7 +44,7 @@ export async function getProfileHandler(ctx: AppContext, input: { id: string }) 
   try {
     // Utiliser le client utilisateur pour les requêtes own profile (RLS)
     // Ou admin client seulement pour les admins
-    const client = isAdmin ? ctx.supabase.getAdminClient() : ctx.supabase.getUserClient();
+    const client = canManageProfiles ? ctx.supabase.getAdminClient() : ctx.supabase.getUserClient();
     if (!client) {
       throw new ORPCError('INTERNAL_SERVER_ERROR');
     }
@@ -52,7 +54,7 @@ export async function getProfileHandler(ctx: AppContext, input: { id: string }) 
       userId: input.id,
       hasClient: !!client,
       hasProfileService: !!profileService,
-      usingAdminClient: isAdmin
+      usingAdminClient: canManageProfiles
     });
 
     const { data, error } = await profileService.getProfile(input.id);
@@ -122,13 +124,14 @@ export async function createProfileHandler(ctx: AppContext, input: ProfileCreate
 
   // SÉCURITÉ: Vérifier que l'utilisateur crée son propre profil ou est admin
   const isOwnProfile = ctx.user.id === input.id;
-  const isAdmin = ctx.user.permissions?.includes('admin:create:profiles');
+  const userPermissions = ctx.user.permissions ?? [];
+  const canManageProfiles = PermissionService.isAdmin(ctx.user.profile) || userPermissions.includes(PERMISSIONS.ADMIN_USERS);
 
-  if (!isOwnProfile && !isAdmin) {
+  if (!isOwnProfile && !canManageProfiles) {
     ctx.logger.warn('Unauthorized profile creation attempt', {
       requesterId: ctx.user.id,
       targetUserId: input.id,
-      hasAdminPermissions: isAdmin
+      hasAdminPermissions: canManageProfiles
     });
     throw new ORPCError('FORBIDDEN');
   }
@@ -138,7 +141,7 @@ export async function createProfileHandler(ctx: AppContext, input: ProfileCreate
 
   // SÉCURITÉ: Empêcher escalation de privilèges
   // Seuls les admins peuvent créer des profils avec role != 'member'
-  if (validatedInput.role && validatedInput.role !== 'member' && !isAdmin) {
+  if (validatedInput.role && validatedInput.role !== 'member' && !canManageProfiles) {
     ctx.logger.warn('Privilege escalation attempt in profile creation', {
       requesterId: ctx.user.id,
       attemptedRole: validatedInput.role
@@ -147,7 +150,7 @@ export async function createProfileHandler(ctx: AppContext, input: ProfileCreate
   }
 
   // SÉCURITÉ: Empêcher modification de status pour non-admins
-  if (validatedInput.status && validatedInput.status !== 'active' && !isAdmin) {
+  if (validatedInput.status && validatedInput.status !== 'active' && !canManageProfiles) {
     ctx.logger.warn('Status modification attempt in profile creation', {
       requesterId: ctx.user.id,
       attemptedStatus: validatedInput.status
@@ -157,7 +160,7 @@ export async function createProfileHandler(ctx: AppContext, input: ProfileCreate
 
   try {
     // Utiliser le client approprié selon les permissions
-    const client = isAdmin ? ctx.supabase.getAdminClient() : ctx.supabase.getUserClient();
+    const client = canManageProfiles ? ctx.supabase.getAdminClient() : ctx.supabase.getUserClient();
     if (!client) {
       throw new ORPCError('INTERNAL_SERVER_ERROR');
     }
@@ -168,9 +171,9 @@ export async function createProfileHandler(ctx: AppContext, input: ProfileCreate
       id: validatedInput.id,
       full_name: validatedInput.full_name,
       // SÉCURITÉ: Role forcé à 'member' sauf pour les admins
-      role: isAdmin ? (validatedInput.role ?? 'member') : 'member',
+      role: canManageProfiles ? (validatedInput.role ?? 'member') : 'member',
       // SÉCURITÉ: Status forcé à 'active' sauf pour les admins
-      status: isAdmin ? (validatedInput.status ?? 'active') : 'active',
+      status: canManageProfiles ? (validatedInput.status ?? 'active') : 'active',
       referrer_id: validatedInput.referrer_id ?? null,
       onboarding_completed: validatedInput.onboarding_completed ?? false,
       consents: validatedInput.consents ?? {
@@ -235,13 +238,14 @@ export async function updateProfileHandler(ctx: AppContext, input: { id: string;
 
   // SÉCURITÉ: Vérifier l'ownership ou permissions admin
   const isOwnProfile = ctx.user.id === input.id;
-  const isAdmin = ctx.user.permissions?.includes('admin:update:profiles');
+  const userPermissions = ctx.user.permissions ?? [];
+  const canManageProfiles = PermissionService.isAdmin(ctx.user.profile) || userPermissions.includes(PERMISSIONS.ADMIN_USERS);
 
-  if (!isOwnProfile && !isAdmin) {
+  if (!isOwnProfile && !canManageProfiles) {
     ctx.logger.warn('Unauthorized profile update attempt', {
       requesterId: ctx.user.id,
       targetUserId: input.id,
-      hasAdminPermissions: isAdmin
+      hasAdminPermissions: canManageProfiles
     });
     throw new ORPCError('FORBIDDEN');
   }
@@ -250,7 +254,7 @@ export async function updateProfileHandler(ctx: AppContext, input: { id: string;
   const validatedUpdates = ProfileUpdateSchema.parse(input.updates);
 
   // SÉCURITÉ: Empêcher escalation de privilèges pour non-admins
-  if (!isAdmin) {
+  if (!canManageProfiles) {
     if (validatedUpdates.role !== undefined) {
       ctx.logger.warn('Role modification attempt by non-admin', {
         requesterId: ctx.user.id,
@@ -272,7 +276,7 @@ export async function updateProfileHandler(ctx: AppContext, input: { id: string;
 
   try {
     // Utiliser le client approprié selon les permissions
-    const client = isAdmin ? ctx.supabase.getAdminClient() : ctx.supabase.getUserClient();
+    const client = canManageProfiles ? ctx.supabase.getAdminClient() : ctx.supabase.getUserClient();
     if (!client) {
       throw new ORPCError('INTERNAL_SERVER_ERROR');
     }
@@ -286,7 +290,7 @@ export async function updateProfileHandler(ctx: AppContext, input: { id: string;
     }
 
     // SÉCURITÉ: Role et status seulement pour les admins (double vérification)
-    if (isAdmin) {
+    if (canManageProfiles) {
       if (validatedUpdates.role !== undefined) {
         updateData.role = validatedUpdates.role;
       }

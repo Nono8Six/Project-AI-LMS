@@ -38,3 +38,4 @@ app/orpc-dev.log
 # Lockfiles: keep pnpm-lock.yaml committed
 # package-lock.json
 # yarn.lock
+.mcp.json
